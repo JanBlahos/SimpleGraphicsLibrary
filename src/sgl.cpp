@@ -11,8 +11,12 @@
 
 #include "contextManager.h"
 #include "context.h"
+#include "exceptions.h"
+#include "matrix.h"
+#include <iostream>
 
 ContextManager cm;
+MatrixStack ms;
 
 /// Current error code.
 static sglEErrorCode _libStatus = SGL_NO_ERROR;
@@ -64,6 +68,7 @@ const char* sglGetErrorString(sglEErrorCode error)
 void sglInit(void) {
     try {
         cm = ContextManager();
+        ms = MatrixStack();
     }
     catch (const std::bad_alloc& ex) {
         setErrCode(SGL_OUT_OF_MEMORY);
@@ -187,31 +192,187 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {}
 // Transform functions
 //---------------------------------------------------------------------------
 
-void sglMatrixMode(sglEMatrixMode mode) {}
+void sglMatrixMode(sglEMatrixMode mode) {
+    switch (mode) {
+    case(sglEMatrixMode::SGL_PROJECTION):
+        ms.SetMode(false);
+        break;
+    default:
+        ms.SetMode(true);
+        break;
+    }
+}
 
-void sglPushMatrix(void) {}
+void sglPushMatrix(void) {
+    try {
+        ms.Duplicate();
+    }
+    catch (MatrixStackUnderflowException& ex1) {
+        std::cerr << ex1.what() << std::endl;
+        setErrCode(SGL_STACK_UNDERFLOW);
+    }
+    catch (MatrixStackOverflowException& ex2) {
+        std::cerr << ex2.what() << std::endl;
+        setErrCode(SGL_STACK_OVERFLOW);
 
-void sglPopMatrix(void) {}
+    }
+}
 
-void sglLoadIdentity(void) {}
+void sglPopMatrix(void) {
+    try {
+        ms.Pop();
+    }
+    catch (MatrixStackUnderflowException& ex1) {
+        std::cerr << ex1.what() << std::endl;
+        setErrCode(SGL_STACK_UNDERFLOW);
+    }
+}
 
-void sglLoadMatrix(const float *matrix) {}
+void sglLoadIdentity(void) {
+    try {
+        auto matrix = Matrix::Eye(4);
+        ms.Push(matrix);
+    }
+    catch (OutOfMemoryException& ex1) {
+        std::cerr << ex1.what() << std::endl;
+        setErrCode(SGL_OUT_OF_MEMORY);
+    }
+}
 
-void sglMultMatrix(const float *matrix) {}
+void sglLoadMatrix(const float *matrix) {
+    try {
+        auto mat = std::make_shared<Matrix>(4, 4, matrix);
+        ms.Push(mat);
+    }
+    catch (OutOfMemoryException& ex1) {
+        std::cerr << ex1.what() << std::endl;
+        setErrCode(SGL_OUT_OF_MEMORY);
+    }
+}
 
-void sglTranslate(float x, float y, float z) {}
+void sglMultMatrix(const float *matrix) {
+    std::shared_ptr<Matrix> mat;
+    std::shared_ptr<Matrix> temp_mat;
+    try {
+        mat = ms.Top();
+        temp_mat = std::make_shared<Matrix>(4, 4, matrix);
+    }
+    catch (MatrixStackUnderflowException& ex1) {
+        std::cerr << ex1.what() << std::endl;
+        setErrCode(SGL_STACK_UNDERFLOW);
+    }
+    catch (OutOfMemoryException& ex2) {
+        std::cerr << ex2.what() << std::endl;
+        setErrCode(SGL_OUT_OF_MEMORY);
+    }
+    if (sglGetError() > SGL_NO_ERROR) {
+        return;
+    }
+    mat->Matmul(temp_mat);
+  }
 
-void sglScale(float scalex, float scaley, float scalez) {}
+void sglTranslate(float x, float y, float z) {
+    std::shared_ptr<Matrix> mat;
+    std::shared_ptr<Matrix> temp_mat;
+    try {
+        mat = ms.Top();
+        temp_mat = Matrix::Translation3D(x, y, z);
+    }
+    catch (MatrixStackUnderflowException& ex1) {
+        std::cerr << ex1.what() << std::endl;
+        setErrCode(SGL_STACK_UNDERFLOW);
+    }
+    catch (OutOfMemoryException& ex2) {
+        std::cerr << ex2.what() << std::endl;
+        setErrCode(SGL_OUT_OF_MEMORY);
+    }
+    if (sglGetError() > SGL_NO_ERROR) {
+        return;
+    }
+    mat->Matmul(temp_mat);
+}
+
+void sglScale(float scalex, float scaley, float scalez) {
+    std::shared_ptr<Matrix> mat;
+    std::shared_ptr<Matrix> temp_mat;
+    try {
+        mat = ms.Top();
+        temp_mat = Matrix::Scale(3, scalex, scaley, scalez);
+    }
+    catch (MatrixStackUnderflowException& ex1) {
+        std::cerr << ex1.what() << std::endl;
+        setErrCode(SGL_STACK_UNDERFLOW);
+    }
+    catch (OutOfMemoryException& ex2) {
+        std::cerr << ex2.what() << std::endl;
+        setErrCode(SGL_OUT_OF_MEMORY);
+    }
+    if (sglGetError() > SGL_NO_ERROR) {
+        return;
+    }
+    mat->Matmul(temp_mat);
+}
 
 void sglRotate2D(float angle, float centerx, float centery) {}
 
-void sglRotateY(float angle) {}
+void sglRotateY(float angle) {
+    std::shared_ptr<Matrix> mat;
+    std::shared_ptr<Matrix> temp_mat;
+    try {
+        mat = ms.Top();
+        temp_mat = Matrix::Rotation3D(angle, sglAxis::Y_AXIS);
+    }
+    catch (MatrixStackUnderflowException& ex1) {
+        std::cerr << ex1.what() << std::endl;
+        setErrCode(SGL_STACK_UNDERFLOW);
+    }
+    catch (OutOfMemoryException& ex2) {
+        std::cerr << ex2.what() << std::endl;
+        setErrCode(SGL_OUT_OF_MEMORY);
+    }
+    if (sglGetError() > SGL_NO_ERROR) {
+        return;
+    }
+    mat->Matmul(temp_mat);
+}
 
-void sglOrtho(float left, float right, float bottom, float top, float near, float far) {}
+void sglOrtho(float left, float right, float bottom, float top, float near, float far) {
+    std::shared_ptr<Matrix> mat;
+    std::shared_ptr<Matrix> temp_mat;
+    try {
+        mat = ms.Top();
+        temp_mat = Matrix::Orthographic3D(left, right, bottom, top, near, far);
+    }
+    catch (MatrixStackUnderflowException& ex1) {
+        std::cerr << ex1.what() << std::endl;
+        setErrCode(SGL_STACK_UNDERFLOW);
+    }
+    catch (OutOfMemoryException& ex2) {
+        std::cerr << ex2.what() << std::endl;
+        setErrCode(SGL_OUT_OF_MEMORY);
+    }
+    if (sglGetError() > SGL_NO_ERROR) {
+        return;
+    }
+    mat->Matmul(temp_mat);
+}
 
 void sglFrustum(float left, float right, float bottom, float top, float near, float far) {}
 
-void sglViewport(int x, int y, int width, int height) {}
+void sglViewport(int x, int y, int width, int height) {
+    std::shared_ptr<Matrix> mat;
+    try {
+        mat = Matrix::Viewport(x, y, width, height);
+    }
+    catch (OutOfMemoryException& ex2) {
+        std::cerr << ex2.what() << std::endl;
+        setErrCode(SGL_OUT_OF_MEMORY);
+    }
+    if (sglGetError() > SGL_NO_ERROR) {
+        return;
+    }
+    ms.SetViewport(mat);
+}
 
 //---------------------------------------------------------------------------
 // Attribute functions

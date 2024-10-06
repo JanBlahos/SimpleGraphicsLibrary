@@ -1,5 +1,6 @@
 
 #include "context.h"
+#include <limits>
 
 Context::Context(int width, int height) {
 	is_drawing = false;
