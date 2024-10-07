@@ -62,15 +62,14 @@ void MatrixStack::Push(std::shared_ptr<Matrix> matrix) {
 void MatrixStack::Duplicate() {
 	auto top_matrix = Top();
 	auto dimensions = top_matrix->GetDimensions();
-	std::shared_ptr<Matrix> dup_matrix = NULL;
 	try {
-		dup_matrix = std::make_shared<Matrix>(Matrix(dimensions.first, dimensions.second, top_matrix->GetData()));
+		std::shared_ptr<Matrix> dup_matrix(new Matrix(dimensions.first, dimensions.second, top_matrix->GetData()));
+		Push(dup_matrix);
 	}
 	catch (OutOfMemoryException& ex) {
 		std::cerr << ex.what() << std::endl;
 		throw MatrixStackOverflowException("Out of memory to allocate more matrices on the stack");
 	}
-	Push(dup_matrix);
 
 }
 

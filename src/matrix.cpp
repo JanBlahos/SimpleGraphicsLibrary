@@ -30,17 +30,20 @@ void Vec4::operator* (float scalar) {
 }
 
 std::shared_ptr<Vec4> Vec4::Cross3D(std::shared_ptr<Vec4> vec1, std::shared_ptr<Vec4> vec2) {
-	return std::make_shared<Vec4>(vec1->y * vec2->z - (vec1->z * vec2->y),
+	std::shared_ptr <Vec4> result(new Vec4(vec1->y * vec2->z - (vec1->z * vec2->y),
 		vec1->z * vec2->x - (vec1->x * vec2->z),
-		vec1->x * vec2->y - (vec1->y * vec2->x), 1);
+		vec1->x * vec2->y - (vec1->y * vec2->x), 1));
+	return result;
 }
 
 std::shared_ptr<Vec4> operator+ (std::shared_ptr<Vec4> vec1, std::shared_ptr<Vec4> vec2) {
-	return std::make_shared<Vec4>(vec1->x + vec2->x, vec1->y + vec2->y, vec1->z + vec2->z, 1);
+	std::shared_ptr <Vec4> result(new Vec4(vec1->x + vec2->x, vec1->y + vec2->y, vec1->z + vec2->z, 1));
+	return result;
 }
 
 std::shared_ptr<Vec4> operator- (std::shared_ptr<Vec4> vec1, std::shared_ptr<Vec4> vec2) {
-	return std::make_shared<Vec4>(vec2->x - vec1->x, vec2->y - vec1->y, vec2->z - vec1->z, 1);
+	std::shared_ptr <Vec4> result(new Vec4(vec2->x - vec1->x, vec2->y - vec1->y, vec2->z - vec1->z, 1));
+	return result;
 }
 
 
@@ -112,7 +115,7 @@ Matrix::Matrix(unsigned rows, unsigned cols, const float* data) {
 		throw OutOfMemoryException("Out of memory! Failed to allocate matrix of size "
 			+ std::to_string(_nrows) + "X" + std::to_string(_ncols));
 	}
-	for (int i = 0; i < rows * cols; i++) {
+	for (unsigned i = 0; i < rows * cols; i++) {
 		_data[i] = data[i];
 	}
 
@@ -204,7 +207,7 @@ Matrix::~Matrix() {
 }
 
 std::shared_ptr<Matrix> Matrix::Eye(unsigned rows) {
-	auto matrix = std::make_shared<Matrix>(Matrix(rows, rows));
+	std::shared_ptr<Matrix> matrix(new Matrix(rows, rows));
 	for (unsigned i = 0; i < rows; i++) {
 		(*matrix)(i, i) = 1;
 	}
@@ -214,7 +217,7 @@ std::shared_ptr<Matrix> Matrix::Eye(unsigned rows) {
 std::shared_ptr<Matrix> Matrix::Scale(unsigned rows, float scaleX, float scaleY, float scaleZ) {
 	// create a scale matrix one dimension higher than supplied so 
 	// it can be multiplied with affine transformations
-	auto matrix = std::make_shared<Matrix>(Matrix(rows + 1, rows + 1));;
+	std::shared_ptr<Matrix> matrix(new Matrix(rows + 1, rows + 1));
 	(*matrix)(0, 0) = scaleX;
 	(*matrix)(1, 1) = scaleY;
 	(*matrix)(2, 2) = scaleZ;
@@ -226,7 +229,7 @@ std::shared_ptr<Matrix> Matrix::Rotation3D(float angle, sglAxis axis) {
 	float rads = angle * PI / 180;
 	float cosangle = std::cos(rads);
 	float sinangle = std::sin(rads);
-	auto matrix = std::make_shared<Matrix>(Matrix(4, 4));;
+	std::shared_ptr<Matrix> matrix(new Matrix(4, 4));
 	for (unsigned i = 0; i < 4; i++) {
 		(*matrix)(i, i) = (i == axis || i == 3) ? 1.0f : cosangle;
 	}
@@ -252,7 +255,7 @@ std::shared_ptr<Matrix> Matrix::Rotation3D(float angle, sglAxis axis) {
 
 
 std::shared_ptr<Matrix> Matrix::Translation3D(float x, float y, float z) {
-	auto matrix = std::make_shared<Matrix>(Matrix(4, 4));
+	std::shared_ptr<Matrix> matrix(new Matrix(4, 4));
 	(*matrix)(0, 3) = x;
 	(*matrix)(1, 3) = y;
 	(*matrix)(2, 3) = z;
@@ -262,7 +265,7 @@ std::shared_ptr<Matrix> Matrix::Translation3D(float x, float y, float z) {
 
 std::shared_ptr<Matrix> Matrix::Orthographic3D(float left, float right, float top
 	, float bottom, float near, float far) {
-	auto matrix = std::make_shared<Matrix>(Matrix(4, 4));
+	std::shared_ptr<Matrix> matrix(new Matrix(4, 4));
 	//multiply the far plane by -1
 	far = -far;
 	auto side_difference = right - left;
@@ -282,7 +285,7 @@ std::shared_ptr<Matrix> Matrix::Viewport(int x, int y,
 	int width, int height) {
 	auto width_half = width / 2;
 	auto height_half = height / 2;
-	auto matrix = std::make_shared<Matrix>(Matrix(3, 3));
+	std::shared_ptr<Matrix> matrix(new Matrix(3, 3));
 	(*matrix)(0, 0) = width_half;
 	(*matrix)(1, 1) = height_half;
 	(*matrix)(0, 2) = x + width_half;
@@ -293,7 +296,7 @@ std::shared_ptr<Matrix> Matrix::Viewport(int x, int y,
 
 std::shared_ptr<Matrix> Matrix::LookAt(std::shared_ptr<Vec4> eye, std::shared_ptr<Vec4> center,
 	std::shared_ptr<Vec4> up) {
-	auto matrix = std::make_shared<Matrix>(Matrix(4, 4));
+	std::shared_ptr<Matrix> matrix(new Matrix(4, 4));
 	auto zaxis = eye - center;
 	zaxis->normalize();
 	auto xaxis = Vec4::Cross3D(up, zaxis);
