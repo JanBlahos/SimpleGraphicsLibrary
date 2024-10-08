@@ -1,4 +1,5 @@
 
+#include "exceptions.h"
 #include "contextManager.h"
 
 ContextManager::ContextManager() {
@@ -12,7 +13,7 @@ ContextManager::ContextManager() {
 	}
 }
 
-int ContextManager::CreateContext(int& width, int& height, sglEErrorCode& error_code) {
+int ContextManager::CreateContext(int& width, int& height) {
 	//First try using all 32 indices
 	if (next_idx < 32) {
 		try {
@@ -20,8 +21,9 @@ int ContextManager::CreateContext(int& width, int& height, sglEErrorCode& error_
 			context_count++;
 		}
 		catch (const std::bad_alloc& ex) {
-			error_code = SGL_OUT_OF_MEMORY;
-			return 0;
+			throw OutOfMemoryException("Not enough memory to initialize a new context.");
+			//error_code = SGL_OUT_OF_MEMORY;
+			//return 0;
 		}
 	//Else find first unused index, if possible
 	} else {
@@ -33,50 +35,56 @@ int ContextManager::CreateContext(int& width, int& height, sglEErrorCode& error_
 						context_count++;
 					}
 					catch (const std::bad_alloc& ex) {
-						error_code = SGL_OUT_OF_MEMORY;
-						return 0;
+						throw OutOfMemoryException("Not enough memory to initialize a new context.");
+						/*error_code = SGL_OUT_OF_MEMORY;
+						return 0;*/
 					}
 				}
 			}
 		} else {
-			error_code = SGL_OUT_OF_RESOURCES;
+			throw SGLOutOfResourcesException("Failed to initialize new context. The maximum supported amount of contexts is currently in use.");
+			//error_code = SGL_OUT_OF_RESOURCES;
 		}
 	}
 
 	return 0;
 };
 
-void ContextManager::DestroyContext(int& id, sglEErrorCode& error_code) {
+void ContextManager::DestroyContext(int& id) {
 	if (id == current_context_idx) {
-		error_code = SGL_INVALID_OPERATION;
-		return;
+		throw SGLInvalidOperationException("Context with the given id is currently in use.");
+		//error_code = SGL_INVALID_OPERATION;
+		//return;
 	}
 	if (id > 31 || id < 0 || context_container[id] == nullptr) {
-		error_code = SGL_INVALID_VALUE;
-		return;
+		throw SGLInvalidValueException("Invalid context id.");
+		//error_code = SGL_INVALID_VALUE;
+		//return;
 	}
 	context_container[id] = nullptr;
 	context_count--;
 };
 
-void ContextManager::SetContext(int& id, sglEErrorCode& error_code) {
+void ContextManager::SetContext(int& id) {
 	if (id > 31 || id < 0 || context_container[id] == nullptr) {
-		error_code = SGL_INVALID_VALUE;
-		return;
+		throw SGLInvalidValueException("Invalid context id.");
+		//error_code = SGL_INVALID_VALUE;
+		//return;
 	}
 	current_context_idx = id;
 	current_context = context_container[id].get();
 };
 
-int ContextManager::GetContext(sglEErrorCode& error_code) {
+int ContextManager::GetContext() {
 	if (current_context == nullptr) {
-		error_code = SGL_INVALID_OPERATION;
-		return -1;
+		throw SGLInvalidOperationException("No context has been allocated.");
+		//error_code = SGL_INVALID_OPERATION;
+		//return -1;
 	}
 	return current_context_idx;
 };
 
-float* ContextManager::GetColorBufferPtr(void) {
+float* ContextManager::GetColorBufferPtr() {
 	if (current_context == nullptr) return nullptr;
 	return current_context->GetColorBufferPtr();
 };

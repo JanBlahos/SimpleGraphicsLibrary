@@ -78,28 +78,50 @@ void sglInit(void) {
 void sglFinish(void) {}
 
 int sglCreateContext(int width, int height) {
-    sglEErrorCode error = SGL_NO_ERROR;
-    int ret = cm.CreateContext(width, height, error);
-    if (error > SGL_NO_ERROR) setErrCode(error);
+    int ret;
+    try {
+        ret = cm.CreateContext(width, height);
+    }
+    catch (const OutOfMemoryException& ex1) {
+        setErrCode(SGL_OUT_OF_MEMORY);
+    }
+    catch (const SGLOutOfResourcesException& ex2) {
+        setErrCode(SGL_OUT_OF_RESOURCES);
+    }
+
     return ret;
 }
 
 void sglDestroyContext(int id) {
-    sglEErrorCode error= SGL_NO_ERROR;
-    cm.DestroyContext(id, error);
-    if (error > SGL_NO_ERROR) setErrCode(error);
+    try {
+        cm.DestroyContext(id);
+    }
+    catch (const SGLInvalidValueException& ex1) {
+        setErrCode(SGL_INVALID_VALUE);
+    }
+    catch (const SGLInvalidOperationException& ex2) {
+        setErrCode(SGL_INVALID_OPERATION);
+    }
 }
 
 void sglSetContext(int id) {
-    sglEErrorCode error = SGL_NO_ERROR;
-    cm.SetContext(id, error);
-    if (error > SGL_NO_ERROR) setErrCode(error);
+    try {
+        cm.SetContext(id);
+    }
+    catch (const SGLInvalidValueException& ex) {
+        setErrCode(SGL_INVALID_VALUE);
+    }
+    
 }
 
 int sglGetContext(void) {
-    sglEErrorCode error = SGL_NO_ERROR;
-    int ret = cm.GetContext(error);
-    if (error > SGL_NO_ERROR) setErrCode(error);
+    int ret;
+    try {
+        ret = cm.GetContext();
+    }
+    catch (const SGLInvalidOperationException& ex) {
+        setErrCode(SGL_INVALID_OPERATION);
+    }
     return ret;
 }
 
@@ -112,36 +134,48 @@ float *sglGetColorBufferPointer(void) {
 //---------------------------------------------------------------------------
 
 void sglClearColor(float r, float g, float b, float alpha) {
-    sglEErrorCode error = SGL_NO_ERROR;
     Context* cc = cm.current_context;
     if (cc != nullptr) {
-        cc->SetClearColor(r, g, b, error);
-        if (error > SGL_NO_ERROR) setErrCode(error);
+        try {
+            cc->SetClearColor(r, g, b);
+        }
+        catch (const SGLInvalidOperationException& ex) {
+            setErrCode(SGL_INVALID_OPERATION);
+        }
     } else {
         setErrCode(SGL_INVALID_OPERATION);
     }
 }
 
 void sglClear(unsigned what) {
-    sglEErrorCode error = SGL_NO_ERROR;
     Context* cc = cm.current_context;
     if (cc != nullptr) {
-        cc->ClearBuffer(what, error);
-        if (error > SGL_NO_ERROR) setErrCode(error);
-    }
-    else {
+        try {
+            cc->ClearBuffer(what);
+        }
+        catch (const SGLInvalidOperationException& ex1) {
+            setErrCode(SGL_INVALID_OPERATION);
+        }
+        catch (const SGLInvalidValueException& ex2) {
+            setErrCode(SGL_INVALID_VALUE);
+        }
+    } else {
         setErrCode(SGL_INVALID_OPERATION);
     }
 }
 
 void sglBegin(sglEElementType mode) {
-    //TODO this can be called before context initialization as explained
-    // but is probably not the case
-    sglEErrorCode error = SGL_NO_ERROR;
     Context* cc = cm.current_context;
     if (cc != nullptr) {
-        cc->BeginDrawing(mode, error);
-        if (error > SGL_NO_ERROR) setErrCode(error);
+        try {
+            cc->BeginDrawing(mode);
+        }
+        catch (const SGLInvalidEnumException& ex1) {
+            setErrCode(SGL_INVALID_ENUM);
+        }
+        catch (const SGLInvalidOperationException& ex2) {
+            setErrCode(SGL_INVALID_OPERATION);
+        }
     } else {
         //Note: this is not specified hence remains commented for now
         //setErrCode(SGL_INVALID_OPERATION);
@@ -152,8 +186,13 @@ void sglEnd(void) {
     sglEErrorCode error = SGL_NO_ERROR;
     Context* cc = cm.current_context;
     if (cc != nullptr) {
-        cc->EndDrawing(error);
-        if (error > SGL_NO_ERROR) setErrCode(error);
+        try {
+            cc->EndDrawing();
+        }
+        catch (const SGLInvalidOperationException& ex)
+        {
+            setErrCode(SGL_INVALID_OPERATION);
+        }
     }
     else {
         //Note: this is not specified hence remains commented for now

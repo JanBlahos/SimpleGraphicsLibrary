@@ -1,4 +1,5 @@
 
+#include "exceptions.h"
 #include "context.h"
 #include <limits>
 
@@ -13,17 +14,20 @@ float* Context::GetColorBufferPtr(void) {
 	return color_buffer.data();
 }
 
-void Context::SetClearColor(float& r, float& g, float& b, sglEErrorCode& error) {
+void Context::SetClearColor(float& r, float& g, float& b) {
 	if (is_drawing) {
-		error = SGL_INVALID_OPERATION;
+		throw SGLInvalidOperationException("Cannot call this function while drawing.");
 	} else {
 		clear_color = Color{ r, g, b };
 	}
 }
 
-void Context::ClearBuffer(unsigned buffer_type, sglEErrorCode& error) {
+void Context::ClearBuffer(unsigned buffer_type) {
 	if (is_drawing) {
-		error = SGL_INVALID_OPERATION;
+		throw SGLInvalidOperationException("Cannot call this function while drawing.");
+	}
+	else if (buffer_type > SGL_DEPTH_BUFFER_BIT) {
+		throw SGLInvalidValueException("Invalid bitmask passed to the function.");
 	} else {
 		switch (buffer_type) {
 
@@ -44,23 +48,20 @@ void Context::ClearBuffer(unsigned buffer_type, sglEErrorCode& error) {
 	}
 };
 
-void Context::BeginDrawing(sglEElementType mode, sglEErrorCode& error) {
+void Context::BeginDrawing(sglEElementType mode) {
 	if (mode >= SGL_LAST_ELEMENT_TYPE) {
-		error = SGL_INVALID_ENUM;
-		return;
+		throw SGLInvalidEnumException("This drawing mode doesn't exist.");
 	}
 	if (is_drawing) {
-		error = SGL_INVALID_OPERATION;
-		return;
+		throw SGLInvalidOperationException("Cannot call this function while drawing.");
 	}
 	is_drawing = true;
 	drawing_mode = mode;
 };
 
-void Context::EndDrawing(sglEErrorCode& error) {
+void Context::EndDrawing() {
 	if (!is_drawing) {
-		error = SGL_INVALID_OPERATION;
-		return;
+		throw SGLInvalidOperationException("Cannot call this function while not drawing.");
 	}
 	is_drawing = false;
 

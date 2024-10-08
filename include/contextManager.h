@@ -12,15 +12,15 @@ class ContextManager
 public:
 	ContextManager();
 
-	int CreateContext(int& width, int& height, sglEErrorCode& error_code);
+	int CreateContext(int& width, int& height);
 
-	void DestroyContext(int& id, sglEErrorCode& error_code);
+	void DestroyContext(int& id);
 
-	void SetContext(int& id, sglEErrorCode& error_code);
+	void SetContext(int& id);
 
-	int GetContext(sglEErrorCode& error_code);
+	int GetContext();
 
-	float* GetColorBufferPtr(void);
+	float* GetColorBufferPtr();
 
 	Context* current_context;
 private:

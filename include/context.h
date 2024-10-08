@@ -19,13 +19,13 @@ public:
 
 	float* GetColorBufferPtr(void);
 
-	void SetClearColor(float& r, float& g, float& b, sglEErrorCode& error);
+	void SetClearColor(float& r, float& g, float& b);
 
-	void ClearBuffer(unsigned buffer_type, sglEErrorCode& error);
+	void ClearBuffer(unsigned buffer_type);
 
-	void BeginDrawing(sglEElementType mode, sglEErrorCode& error);
+	void BeginDrawing(sglEElementType mode);
 
-	void EndDrawing(sglEErrorCode& error);
+	void EndDrawing();
 
 	void BufferVertex4f(float x, float y, float z, float w);
 

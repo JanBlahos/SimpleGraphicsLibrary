@@ -117,6 +117,88 @@ public:
     }
 };
 
+/// <summary>
+/// Exception used when the context count would exceed the maximum
+/// supported (32)
+/// </summary>
+class SGLOutOfResourcesException : public std::exception {
+private:
+    std::string message;
 
+public:
+    SGLOutOfResourcesException(std::string msg)
+        : message(msg)
+    {
+    }
+
+    // Override the what() method to return the message
+    const char* what() const throw()
+    {
+        return message.c_str();
+    }
+};
+
+/// <summary>
+/// Exception used when an invalid sequence of operations is
+/// encountered
+/// </summary>
+class SGLInvalidOperationException: public std::exception {
+private:
+    std::string message;
+
+public:
+    SGLInvalidOperationException(std::string msg)
+        : message(msg)
+    {
+    }
+
+    // Override the what() method to return the message
+    const char* what() const throw()
+    {
+        return message.c_str();
+    }
+};
+
+/// <summary>
+/// Exception used typically when a function is called with
+/// an invalid index
+/// </summary>
+class SGLInvalidValueException : public std::exception {
+private:
+    std::string message;
+
+public:
+    SGLInvalidValueException(std::string msg)
+        : message(msg)
+    {
+    }
+
+    // Override the what() method to return the message
+    const char* what() const throw()
+    {
+        return message.c_str();
+    }
+};
+
+/// <summary>
+/// Exception used when the selected mode (e.g. for drawing)
+/// is invalid
+/// </summary>
+class SGLInvalidEnumException : public std::exception {
+private:
+    std::string message;
+
+public:
+    SGLInvalidEnumException(std::string msg)
+        : message(msg)
+    {
+    }
+
+    // Override the what() method to return the message
+    const char* what() const throw()
+    {
+        return message.c_str();
+    }
+};
 
 #endif
