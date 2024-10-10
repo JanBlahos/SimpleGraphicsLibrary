@@ -182,7 +182,9 @@ void sglVertex2f(float x, float y) {
     }
 }
 
-void sglCircle(float x, float y, float z, float radius) {}
+void sglCircle(float x, float y, float z, float radius) {
+    
+}
 
 void sglEllipse(float x, float y, float z, float a, float b) {}
 
@@ -313,7 +315,32 @@ void sglScale(float scalex, float scaley, float scalez) {
     mat->Matmul(temp_mat);
 }
 
-void sglRotate2D(float angle, float centerx, float centery) {}
+void sglRotate2D(float angle, float centerx, float centery) {
+    std::shared_ptr<Matrix> mat;
+    std::shared_ptr<Matrix> temp_mat;
+    try {
+        mat = ms.Top();
+        //to perform rotation with a point given as center first translate to point to 
+        // be at the origin of coordinate system, rotate and then translate back
+        // however, because of matrix transformations being applied from right
+        // to left we actually need to do this in reverse order
+        temp_mat = Matrix::Translation3D(centerx, centery, 0);
+        temp_mat->Matmul(Matrix::Rotation3D(angle, sglAxis::Y_AXIS));
+        temp_mat->Matmul(Matrix::Translation3D(-centerx, -centery, 0));
+    }
+    catch (MatrixStackUnderflowException& ex1) {
+        std::cerr << ex1.what() << std::endl;
+        setErrCode(SGL_STACK_UNDERFLOW);
+    }
+    catch (OutOfMemoryException& ex2) {
+        std::cerr << ex2.what() << std::endl;
+        setErrCode(SGL_OUT_OF_MEMORY);
+    }
+    if (sglGetError() > SGL_NO_ERROR) {
+        return;
+    }
+    mat->Matmul(temp_mat);
+}
 
 void sglRotateY(float angle) {
     std::shared_ptr<Matrix> mat;
@@ -400,7 +427,59 @@ void sglSphere(const float x,
                const float y,
                const float z,
                const float radius)
-{}
+{
+    //scale and transform the coordinates first the radius first
+    try {
+        auto mat = ms.Top();
+        //square root of determinant of the upper left 2x2 part of the matrix
+        // times radius is the new radius
+        auto new_radius = radius * sqrt((*mat)(0, 0) * (*mat)(1, 1) - ((*mat)(1, 0) * (*mat)(0, 1)));
+        std::shared_ptr<Vec4> temp_vec(new Vec4(x, y, z, 1));
+        auto temp_vec = mat->Matmul(temp_vec);
+        auto new_x = temp_vec->x;
+        auto new_y = temp_vec->y;
+        // draw the "first octant" starting point
+        int current_x = round(new_x);
+        //if y == 0 is at the bottom of the screen otherwise it would be added
+        int current_y = round(new_y + new_radius);
+        //initialize the Bressenham algorithm constants
+        int dvex = 3 + 2 * new_x;
+        int dvey = 2 * current_y - 2;
+        //starting decision constant if you put current_x and 
+        // current_y into the parametric circle equation
+        int p = (current_x * current_x) + 2 * current_x + 1 
+            + (new_y * new_y) + 2 * (new_y * new_radius)
+             - new_y - new_radius;
+        // (current_x * current_x) + 2 * current_x + 1 
+        //+(new_y * new_y) - 2 * (new_y * new_radius)
+        // - new_y + new_radius; if y == 0 is at the top of the screen
+
+        while (current_x <= current_y) {
+            //draw the 8 symmetrical vertices
+            sglVertex4f(current_x, current_y, z, 1);
+            sglVertex4f(new_x - current_x, current_y, z, 1);
+            sglVertex4f(current_x, new_y - current_y, z, 1);
+            sglVertex4f(new_x  - current_x, new_y - current_y, z, 1);
+            sglVertex4f(current_y, current_x, z, 1);
+            sglVertex4f(new_y - current_y, current_x, z, 1);
+            sglVertex4f(current_y, new_x - current_x, z, 1);
+            sglVertex4f(new_y - current_y, new_x - current_x, z, 1);
+            if (p > 0) {
+                p = p - dvey;
+                dvey = dvey - 2;
+                current_y = current_y - 2;
+            }
+            p = p + dvex;
+            dvex = dvex + 2;
+            current_x = current_x + 1;
+
+        }
+    }
+    catch (MatrixStackUnderflowException& ex1) {
+        std::cerr << ex1.what() << std::endl;
+        setErrCode(SGL_STACK_UNDERFLOW);
+    }
+}
 
 void sglMaterial(const float r,
                  const float g,
