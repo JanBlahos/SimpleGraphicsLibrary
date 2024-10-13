@@ -170,6 +170,7 @@ void Matrix::PrintMatrix(std::shared_ptr<Matrix> matrix) {
 /// Implemented naively for now. For speed will need to optimize this
 /// </summary>
 void Matrix::Matmul(std::shared_ptr<Matrix> multiplicand) {
+	Matrix::PrintMatrix(multiplicand);
 	auto other_dimensions = multiplicand->GetDimensions();
 	auto other_cols = other_dimensions.second;
 	if (_ncols != other_dimensions.first) {
@@ -187,10 +188,15 @@ void Matrix::Matmul(std::shared_ptr<Matrix> multiplicand) {
 	}
 	for (unsigned i = 0; i < other_cols; i++) {
 		for (unsigned j = 0; j < _nrows; j++) {
-			unsigned sum = 0;
+			float sum = 0;
 				for (unsigned k = 0; k < _ncols; k++) {
+					//std::cout << "Multiplicand at row " << k << " collumn " << i << " is " << (*multiplicand)(k, i) << std::endl;
+					//std::cout << "Old data at row " << j << " collumn " << k << " is "<< old_data[j + k * _nrows] << std::endl;
+					//std::cout << "Element is " << old_data[j + k * _nrows] * (*multiplicand)(k, i) << std::endl;
 					sum += old_data[j + k * _nrows] * (*multiplicand)(k, i);
+					//std::cout << "Partial sum " << sum << std::endl;
 					}
+				//std::cout << "Row " << j << " collumn " << i << "sum " << sum << std::endl;
 			_data[j + i * _nrows] = sum;
 		}
 	}
@@ -207,7 +213,7 @@ std::shared_ptr<Vec4> Matrix::Matmul(std::shared_ptr<Vec4> multiplicand) {
 	//auto other_cols  = 1;
 	float vec_data[4] = {};
 	for (unsigned j = 0; j < _nrows; j++) {
-		unsigned sum = 0;
+		float sum = 0;
 		for (unsigned k = 0; k < _ncols; k++) {
 			sum += _data[j + k * _nrows] * (*multiplicand)(k);
 		}

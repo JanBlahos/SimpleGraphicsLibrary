@@ -292,6 +292,7 @@ void sglTranslate(float x, float y, float z) {
         return;
     }
     mat->Matmul(temp_mat);
+    //Matrix::PrintMatrix(mat);
 }
 
 void sglScale(float scalex, float scaley, float scalez) {
@@ -313,6 +314,7 @@ void sglScale(float scalex, float scaley, float scalez) {
         return;
     }
     mat->Matmul(temp_mat);
+    //Matrix::PrintMatrix(mat);
 }
 
 void sglRotate2D(float angle, float centerx, float centery) {
@@ -325,8 +327,9 @@ void sglRotate2D(float angle, float centerx, float centery) {
         // however, because of matrix transformations being applied from right
         // to left we actually need to do this in reverse order
         temp_mat = Matrix::Translation3D(centerx, centery, 0);
-        temp_mat->Matmul(Matrix::Rotation3D(angle, sglAxis::Y_AXIS));
+        temp_mat->Matmul(Matrix::Rotation3D(angle, sglAxis::Z_AXIS));
         temp_mat->Matmul(Matrix::Translation3D(-centerx, -centery, 0));
+        //Matrix::PrintMatrix(temp_mat);
     }
     catch (MatrixStackUnderflowException& ex1) {
         std::cerr << ex1.what() << std::endl;
@@ -340,6 +343,7 @@ void sglRotate2D(float angle, float centerx, float centery) {
         return;
     }
     mat->Matmul(temp_mat);
+    //Matrix::PrintMatrix(mat);
 }
 
 void sglRotateY(float angle) {
@@ -399,6 +403,7 @@ void sglViewport(int x, int y, int width, int height) {
         return;
     }
     ms.SetViewport(mat);
+    //Matrix::PrintMatrix(mat);
 }
 
 //---------------------------------------------------------------------------
