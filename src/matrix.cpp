@@ -23,10 +23,9 @@ void Vec4::normalize() {
 	z = z / norm;
 
 }
-void Vec4::operator* (float scalar) {
-	x *= scalar;
-	y *= scalar;
-	z *= scalar;
+std::shared_ptr<Vec4> Vec4::operator* (float scalar) {
+	std::shared_ptr <Vec4> result(new Vec4(x * scalar, y * scalar, z * scalar, 1));
+	return result;
 }
 
 std::shared_ptr<Vec4> Vec4::Cross3D(std::shared_ptr<Vec4> vec1, std::shared_ptr<Vec4> vec2) {
@@ -36,14 +35,23 @@ std::shared_ptr<Vec4> Vec4::Cross3D(std::shared_ptr<Vec4> vec1, std::shared_ptr<
 	return result;
 }
 
-std::shared_ptr<Vec4> operator+ (std::shared_ptr<Vec4> vec1, std::shared_ptr<Vec4> vec2) {
-	std::shared_ptr <Vec4> result(new Vec4(vec1->x + vec2->x, vec1->y + vec2->y, vec1->z + vec2->z, 1));
+std::shared_ptr<Vec4> Vec4::operator+ (std::shared_ptr<Vec4> vec2) {
+	std::shared_ptr <Vec4> result(new Vec4(x + vec2->x, y + vec2->y, z + vec2->z, 1));
 	return result;
 }
 
-std::shared_ptr<Vec4> operator- (std::shared_ptr<Vec4> vec1, std::shared_ptr<Vec4> vec2) {
-	std::shared_ptr <Vec4> result(new Vec4(vec2->x - vec1->x, vec2->y - vec1->y, vec2->z - vec1->z, 1));
+std::shared_ptr<Vec4> Vec4::operator- (std::shared_ptr<Vec4> vec2) {
+	std::shared_ptr <Vec4> result(new Vec4(x - vec2->x, y - vec2->y, z - vec2->z, 1));
 	return result;
+}
+
+
+void Vec4::PrintVector(std::shared_ptr<Vec4> vec) {
+	for (unsigned i = 0; i < 4; i++) {
+		std::cout << (*vec)(i) << " ";
+	}
+	std::cout << std::endl;
+	std::cout << "Finished printing vector" << std::endl;
 }
 
 
@@ -147,6 +155,17 @@ const float* Matrix::GetData() {
 	return _data;
 }
 
+void Matrix::PrintMatrix(std::shared_ptr<Matrix> matrix) {
+	auto dims = matrix->GetDimensions();
+	for (unsigned i = 0; i < dims.second; i++) {
+		for (unsigned j = 0; j < dims.first; j++) {
+			std::cout << (*matrix)(j, i) << " ";
+		}
+		std::cout << std::endl;
+	}
+	std::cout << "Finished printing matrix " << std::endl;
+}
+
 /// <summary>
 /// Implemented naively for now. For speed will need to optimize this
 /// </summary>
@@ -196,8 +215,10 @@ std::shared_ptr<Vec4> Matrix::Matmul(std::shared_ptr<Vec4> multiplicand) {
 	}
 	_nrows = 0;
 	_ncols = 0;
-	delete[] _data;
-	return std::make_shared<Vec4>(Vec4(vec_data[0], vec_data[1], vec_data[2], vec_data[3]));
+	//delete[] _data;
+	auto result = std::make_shared<Vec4>(Vec4(vec_data[0], vec_data[1], vec_data[2], vec_data[3]));
+	Vec4::PrintVector(result);
+	return result;
 }
 
 Matrix::~Matrix() {
@@ -211,6 +232,7 @@ std::shared_ptr<Matrix> Matrix::Eye(unsigned rows) {
 	for (unsigned i = 0; i < rows; i++) {
 		(*matrix)(i, i) = 1;
 	}
+	//Matrix::PrintMatrix(matrix);
 	return matrix;
 }
 
@@ -222,13 +244,14 @@ std::shared_ptr<Matrix> Matrix::Scale(unsigned rows, float scaleX, float scaleY,
 	(*matrix)(1, 1) = scaleY;
 	(*matrix)(2, 2) = scaleZ;
 	(*matrix)(rows, rows) = 1.0f;
+	//Matrix::PrintMatrix(matrix);
 	return matrix;
 }
 std::shared_ptr<Matrix> Matrix::Rotation3D(float angle, sglAxis axis) {
 	//C++ sin and cos need input in radians so convert angle first
-	float rads = angle * PI / 180;
-	float cosangle = std::cos(rads);
-	float sinangle = std::sin(rads);
+	//float rads = angle * PI / 180;
+	float cosangle = std::cos(angle);
+	float sinangle = std::sin(angle);
 	std::shared_ptr<Matrix> matrix(new Matrix(4, 4));
 	for (unsigned i = 0; i < 4; i++) {
 		(*matrix)(i, i) = (i == axis || i == 3) ? 1.0f : cosangle;
@@ -250,34 +273,35 @@ std::shared_ptr<Matrix> Matrix::Rotation3D(float angle, sglAxis axis) {
 		throw BadDimensionException("Trying to create rotation matrix alongside invalid axis "
 			+ std::to_string(axis));
 	}
+	//Matrix::PrintMatrix(matrix);
 	return matrix;
 }
 
 
 std::shared_ptr<Matrix> Matrix::Translation3D(float x, float y, float z) {
-	std::shared_ptr<Matrix> matrix(new Matrix(4, 4));
+	std::shared_ptr<Matrix> matrix = Matrix::Eye(4);
 	(*matrix)(0, 3) = x;
 	(*matrix)(1, 3) = y;
 	(*matrix)(2, 3) = z;
 	(*matrix)(3, 3) = 1.0f;
+	//Matrix::PrintMatrix(matrix);
 	return matrix;
 }
 
 std::shared_ptr<Matrix> Matrix::Orthographic3D(float left, float right, float top
 	, float bottom, float near, float far) {
 	std::shared_ptr<Matrix> matrix(new Matrix(4, 4));
-	//multiply the far plane by -1
-	far = -far;
 	auto side_difference = right - left;
 	auto top_difference = top - bottom;
-	auto plane_difference = near - far;
+	auto plane_difference = far - near;
 	(*matrix)(0, 0) = 2 / side_difference;
 	(*matrix)(1, 1) = 2 / top_difference;
 	(*matrix)(2, 2) = -2 / plane_difference;
 	(*matrix)(0, 3) = -right - left / side_difference;
 	(*matrix)(1, 3) = -top - bottom / top_difference;
-	(*matrix)(2, 3) = -near - far / plane_difference;
+	(*matrix)(2, 3) = far - near / plane_difference;
 	(*matrix)(3, 3) = 1;
+	//Matrix::PrintMatrix(matrix);
 	return matrix;
 }
 
@@ -285,19 +309,22 @@ std::shared_ptr<Matrix> Matrix::Viewport(int x, int y,
 	int width, int height) {
 	auto width_half = width / 2;
 	auto height_half = height / 2;
-	std::shared_ptr<Matrix> matrix(new Matrix(3, 3));
+	std::shared_ptr<Matrix> matrix(new Matrix(4, 4));
 	(*matrix)(0, 0) = width_half;
 	(*matrix)(1, 1) = height_half;
 	(*matrix)(0, 2) = x + width_half;
 	(*matrix)(1, 2) = y + height_half;
 	(*matrix)(2, 2) = 1;
+	(*matrix)(3, 3) = 1;
+	//Matrix::PrintMatrix(matrix);
 	return matrix;
 }
 
 std::shared_ptr<Matrix> Matrix::LookAt(std::shared_ptr<Vec4> eye, std::shared_ptr<Vec4> center,
 	std::shared_ptr<Vec4> up) {
 	std::shared_ptr<Matrix> matrix(new Matrix(4, 4));
-	auto zaxis = eye - center;
+	auto zaxis = (*eye) - center;
+	Vec4::PrintVector(zaxis);
 	zaxis->normalize();
 	auto xaxis = Vec4::Cross3D(up, zaxis);
 	xaxis->normalize();

@@ -71,7 +71,12 @@ public:
 	/// and the w component is ignored.
 	/// </summary>
 	/// <param name="scalar"></param>
-	void operator* (float scalar);
+	std::shared_ptr<Vec4> operator* (float scalar);
+
+	/// <summary>
+	/// Debugging metod to print given vector.
+	/// </summary>
+	static void PrintVector(std::shared_ptr<Vec4> vec);
 
 	/// <summary>
 	/// Compute the vector product (eg. a vector perpendicular
@@ -83,24 +88,24 @@ public:
 	/// <param name="vec2"></param>
 	/// <returns></returns>
 	static std::shared_ptr<Vec4> Cross3D(std::shared_ptr<Vec4> vec1, std::shared_ptr<Vec4> vec2);
+	/// <summary>
+	/// Operator adding two vector together.
+	/// </summary>
+	/// <param name="vec1"></param>
+	/// <param name="vec2"></param>
+	/// <returns></returns>
+	std::shared_ptr<Vec4> operator+ (std::shared_ptr<Vec4> vec2);
+
+	/// <summary>
+	/// Operator subtracting two vecotrs (result can be
+	/// interpreted as vector representing path from vec2 
+	/// to vec1)
+	/// <param name="vec1"></param>
+	/// <param name="vec2"></param>
+	/// <returns></returns>
+	std::shared_ptr<Vec4> operator- (std::shared_ptr<Vec4> vec2);
 };
 
-/// <summary>
-/// Operator adding two vector together.
-/// </summary>
-/// <param name="vec1"></param>
-/// <param name="vec2"></param>
-/// <returns></returns>
-static std::shared_ptr<Vec4> operator+ (std::shared_ptr<Vec4> vec1, std::shared_ptr<Vec4> vec2);
-
-/// <summary>
-/// Operator subtracting two vecotrs (result can be
-/// interpreted as vector representing path from vec2 
-/// to vec1)
-/// <param name="vec1"></param>
-/// <param name="vec2"></param>
-/// <returns></returns>
-static std::shared_ptr<Vec4> operator- (std::shared_ptr<Vec4> vec1, std::shared_ptr<Vec4> vec2);
 
 /// <summary>
 /// Class represanting general matrix of shape rows x cols.
@@ -239,6 +244,12 @@ public:
 	/// <returns></returns>
 	static std::shared_ptr<Matrix> LookAt(std::shared_ptr<Vec4> eye, std::shared_ptr<Vec4> center,
 		std::shared_ptr<Vec4> up);
+
+	/// <summary>
+	/// Helper function to print a matrix.
+	/// </summary>
+	/// <param name="matrix"></param>
+	static void PrintMatrix(std::shared_ptr<Matrix> matrix);
 
 
 private:

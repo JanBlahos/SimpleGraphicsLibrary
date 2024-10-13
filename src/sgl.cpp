@@ -434,8 +434,8 @@ void sglSphere(const float x,
         //square root of determinant of the upper left 2x2 part of the matrix
         // times radius is the new radius
         auto new_radius = radius * sqrt((*mat)(0, 0) * (*mat)(1, 1) - ((*mat)(1, 0) * (*mat)(0, 1)));
-        std::shared_ptr<Vec4> temp_vec(new Vec4(x, y, z, 1));
-        auto temp_vec = mat->Matmul(temp_vec);
+        std::shared_ptr<Vec4> original_vec(new Vec4(x, y, z, 1));
+        auto temp_vec = mat->Matmul(original_vec);
         auto new_x = temp_vec->x;
         auto new_y = temp_vec->y;
         // draw the "first octant" starting point
