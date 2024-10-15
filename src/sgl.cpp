@@ -16,7 +16,6 @@
 #include <iostream>
 
 ContextManager cm;
-MatrixStack ms;
 
 /// Current error code.
 static sglEErrorCode _libStatus = SGL_NO_ERROR;
@@ -68,7 +67,6 @@ const char* sglGetErrorString(sglEErrorCode error)
 void sglInit(void) {
     try {
         cm = ContextManager();
-        ms = MatrixStack();
     }
     catch (const std::bad_alloc& ex) {
         setErrCode(SGL_OUT_OF_MEMORY);
@@ -135,68 +133,69 @@ float *sglGetColorBufferPointer(void) {
 
 void sglClearColor(float r, float g, float b, float alpha) {
     Context* cc = cm.current_context;
-    if (cc != nullptr) {
-        try {
-            cc->SetClearColor(r, g, b);
-        }
-        catch (const SGLInvalidOperationException& ex) {
-            setErrCode(SGL_INVALID_OPERATION);
-        }
-    } else {
+    if (cc == nullptr) {
+        setErrCode(SGL_INVALID_OPERATION);
+        return;
+    }
+
+    try {
+        cc->SetClearColor(r, g, b);
+    }
+    catch (const SGLInvalidOperationException& ex) {
         setErrCode(SGL_INVALID_OPERATION);
     }
 }
 
 void sglClear(unsigned what) {
     Context* cc = cm.current_context;
-    if (cc != nullptr) {
-        try {
-            cc->ClearBuffer(what);
-        }
-        catch (const SGLInvalidOperationException& ex1) {
-            setErrCode(SGL_INVALID_OPERATION);
-        }
-        catch (const SGLInvalidValueException& ex2) {
-            setErrCode(SGL_INVALID_VALUE);
-        }
-    } else {
+    if (cc == nullptr) {
         setErrCode(SGL_INVALID_OPERATION);
+        return;
+    }
+
+    try {
+        cc->ClearBuffer(what);
+    }
+    catch (const SGLInvalidOperationException& ex1) {
+        setErrCode(SGL_INVALID_OPERATION);
+    }
+    catch (const SGLInvalidValueException& ex2) {
+        setErrCode(SGL_INVALID_VALUE);
     }
 }
 
 void sglBegin(sglEElementType mode) {
     Context* cc = cm.current_context;
-    if (cc != nullptr) {
-        try {
-            cc->BeginDrawing(mode);
-        }
-        catch (const SGLInvalidEnumException& ex1) {
-            setErrCode(SGL_INVALID_ENUM);
-        }
-        catch (const SGLInvalidOperationException& ex2) {
-            setErrCode(SGL_INVALID_OPERATION);
-        }
-    } else {
-        //Note: this is not specified hence remains commented for now
-        //setErrCode(SGL_INVALID_OPERATION);
+    if (cc == nullptr) {
+        setErrCode(SGL_INVALID_OPERATION);
+        return;
+    }
+
+    try {
+        cc->BeginDrawing(mode);
+    }
+    catch (const SGLInvalidEnumException& ex1) {
+        setErrCode(SGL_INVALID_ENUM);
+    }
+    catch (const SGLInvalidOperationException& ex2) {
+        setErrCode(SGL_INVALID_OPERATION);
     }
 }
 
 void sglEnd(void) {
     sglEErrorCode error = SGL_NO_ERROR;
     Context* cc = cm.current_context;
-    if (cc != nullptr) {
-        try {
-            cc->EndDrawing();
-        }
-        catch (const SGLInvalidOperationException& ex)
-        {
-            setErrCode(SGL_INVALID_OPERATION);
-        }
+    if (cc == nullptr) {
+        setErrCode(SGL_INVALID_OPERATION);
+        return;
     }
-    else {
-        //Note: this is not specified hence remains commented for now
-        //setErrCode(SGL_INVALID_OPERATION);
+
+    try {
+        cc->EndDrawing();
+    }
+    catch (const SGLInvalidOperationException& ex)
+    {
+        setErrCode(SGL_INVALID_OPERATION);
     }
 }
 
@@ -234,17 +233,32 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {}
 //---------------------------------------------------------------------------
 
 void sglMatrixMode(sglEMatrixMode mode) {
-    switch (mode) {
-    case(sglEMatrixMode::SGL_PROJECTION):
-        ms.SetMode(false);
-        break;
-    default:
-        ms.SetMode(true);
-        break;
+    //TODO missing exceptions
+    Context* cc = cm.current_context;
+    if (cc != nullptr) {
+        MatrixStack& ms = cc->matrix_stack;
+        switch (mode) {
+
+        case(sglEMatrixMode::SGL_PROJECTION):
+            cc->matrix_stack.SetMode(false);
+            break;
+        default:
+            cc->matrix_stack.SetMode(true);
+            break;
+        }
+    } else { //no context allocated yet
+        setErrCode(SGL_INVALID_OPERATION);
     }
 }
 
 void sglPushMatrix(void) {
+    Context* cc = cm.current_context;
+    if (cc == nullptr) {
+        setErrCode(SGL_INVALID_OPERATION);
+        return;
+    }
+
+    MatrixStack& ms = cc->matrix_stack;
     try {
         ms.Duplicate();
     }
@@ -255,11 +269,17 @@ void sglPushMatrix(void) {
     catch (MatrixStackOverflowException& ex2) {
         std::cerr << ex2.what() << std::endl;
         setErrCode(SGL_STACK_OVERFLOW);
-
     }
 }
 
 void sglPopMatrix(void) {
+    Context* cc = cm.current_context;
+    if (cc == nullptr) {
+        setErrCode(SGL_INVALID_OPERATION);
+        return;
+    }
+
+    MatrixStack& ms = cc->matrix_stack;
     try {
         ms.Pop();
     }
@@ -270,6 +290,14 @@ void sglPopMatrix(void) {
 }
 
 void sglLoadIdentity(void) {
+    Context* cc = cm.current_context;
+    if (cc == nullptr) {
+        setErrCode(SGL_INVALID_OPERATION);
+        return;
+    }
+
+    MatrixStack& ms = cc->matrix_stack;
+
     try {
         auto matrix = Matrix::Eye(4);
         ms.Push(matrix);
@@ -281,6 +309,14 @@ void sglLoadIdentity(void) {
 }
 
 void sglLoadMatrix(const float *matrix) {
+    Context* cc = cm.current_context;
+    if (cc == nullptr) {
+        setErrCode(SGL_INVALID_OPERATION);
+        return;
+    }
+
+    MatrixStack& ms = cc->matrix_stack;
+
     try {
         auto mat = std::make_shared<Matrix>(4, 4, matrix);
         ms.Push(mat);
@@ -292,6 +328,14 @@ void sglLoadMatrix(const float *matrix) {
 }
 
 void sglMultMatrix(const float *matrix) {
+    Context* cc = cm.current_context;
+    if (cc == nullptr) {
+        setErrCode(SGL_INVALID_OPERATION);
+        return;
+    }
+
+    MatrixStack& ms = cc->matrix_stack;
+
     std::shared_ptr<Matrix> mat;
     std::shared_ptr<Matrix> temp_mat;
     try {
@@ -313,6 +357,14 @@ void sglMultMatrix(const float *matrix) {
   }
 
 void sglTranslate(float x, float y, float z) {
+    Context* cc = cm.current_context;
+    if (cc == nullptr) {
+        setErrCode(SGL_INVALID_OPERATION);
+        return;
+    }
+
+    MatrixStack& ms = cc->matrix_stack;
+
     std::shared_ptr<Matrix> mat;
     std::shared_ptr<Matrix> temp_mat;
     try {
@@ -335,6 +387,14 @@ void sglTranslate(float x, float y, float z) {
 }
 
 void sglScale(float scalex, float scaley, float scalez) {
+    Context* cc = cm.current_context;
+    if (cc == nullptr) {
+        setErrCode(SGL_INVALID_OPERATION);
+        return;
+    }
+
+    MatrixStack& ms = cc->matrix_stack;
+
     std::shared_ptr<Matrix> mat;
     std::shared_ptr<Matrix> temp_mat;
     try {
@@ -386,6 +446,14 @@ void sglRotate2D(float angle, float centerx, float centery) {
 }
 
 void sglRotateY(float angle) {
+    Context* cc = cm.current_context;
+    if (cc == nullptr) {
+        setErrCode(SGL_INVALID_OPERATION);
+        return;
+    }
+
+    MatrixStack& ms = cc->matrix_stack;
+
     std::shared_ptr<Matrix> mat;
     std::shared_ptr<Matrix> temp_mat;
     try {
@@ -407,6 +475,14 @@ void sglRotateY(float angle) {
 }
 
 void sglOrtho(float left, float right, float bottom, float top, float near, float far) {
+    Context* cc = cm.current_context;
+    if (cc == nullptr) {
+        setErrCode(SGL_INVALID_OPERATION);
+        return;
+    }
+
+    MatrixStack& ms = cc->matrix_stack;
+
     std::shared_ptr<Matrix> mat;
     std::shared_ptr<Matrix> temp_mat;
     try {
@@ -430,6 +506,14 @@ void sglOrtho(float left, float right, float bottom, float top, float near, floa
 void sglFrustum(float left, float right, float bottom, float top, float near, float far) {}
 
 void sglViewport(int x, int y, int width, int height) {
+    Context* cc = cm.current_context;
+    if (cc == nullptr) {
+        setErrCode(SGL_INVALID_OPERATION);
+        return;
+    }
+
+    MatrixStack& ms = cc->matrix_stack;
+
     std::shared_ptr<Matrix> mat;
     try {
         mat = Matrix::Viewport(x, y, width, height);
@@ -449,15 +533,49 @@ void sglViewport(int x, int y, int width, int height) {
 // Attribute functions
 //---------------------------------------------------------------------------
 
-void sglColor3f(float r, float g, float b) {}
+void sglColor3f(float r, float g, float b) {
+    Context* cc = cm.current_context;
+    if (cc != nullptr) {
+        try {
+            cc->SetDrawingColor(r, g, b);
+        }
+        catch (const SGLInvalidOperationException& ex) {
+            setErrCode(SGL_INVALID_OPERATION);
+        }
+    } else {
+        setErrCode(SGL_INVALID_OPERATION);
+    }
+}
 
-void sglAreaMode(sglEAreaMode mode) {}
+void sglAreaMode(sglEAreaMode mode) {
+    //TODO hw2
+}
 
-void sglPointSize(float size) {}
+void sglPointSize(float size) {
+    Context* cc = cm.current_context;
+    if (cc != nullptr) {
+        try {
+            cc->SetPointSize(size);
+        }
+        catch (const SGLInvalidOperationException& ex1) {
+            setErrCode(SGL_INVALID_OPERATION);
+        }
+        catch (const SGLInvalidValueException& ex2) {
+            setErrCode(SGL_INVALID_VALUE);
+        }
+    }
+    else {
+        setErrCode(SGL_INVALID_OPERATION);
+    }
+}
 
-void sglEnable(sglEEnableFlags cap) {}
+void sglEnable(sglEEnableFlags cap) {
+    //TODO for depthbuffer test
+}
 
-void sglDisable(sglEEnableFlags cap) {}
+void sglDisable(sglEEnableFlags cap) {
+    //TODO for depthbuffer test
+}
 
 //---------------------------------------------------------------------------
 // RayTracing oriented functions

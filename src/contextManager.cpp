@@ -22,8 +22,6 @@ int ContextManager::CreateContext(int& width, int& height) {
 		}
 		catch (const std::bad_alloc& ex) {
 			throw OutOfMemoryException("Not enough memory to initialize a new context.");
-			//error_code = SGL_OUT_OF_MEMORY;
-			//return 0;
 		}
 	//Else find first unused index, if possible
 	} else {
@@ -36,14 +34,11 @@ int ContextManager::CreateContext(int& width, int& height) {
 					}
 					catch (const std::bad_alloc& ex) {
 						throw OutOfMemoryException("Not enough memory to initialize a new context.");
-						/*error_code = SGL_OUT_OF_MEMORY;
-						return 0;*/
 					}
 				}
 			}
 		} else {
 			throw SGLOutOfResourcesException("Failed to initialize new context. The maximum supported amount of contexts is currently in use.");
-			//error_code = SGL_OUT_OF_RESOURCES;
 		}
 	}
 
@@ -53,13 +48,9 @@ int ContextManager::CreateContext(int& width, int& height) {
 void ContextManager::DestroyContext(int& id) {
 	if (id == current_context_idx) {
 		throw SGLInvalidOperationException("Context with the given id is currently in use.");
-		//error_code = SGL_INVALID_OPERATION;
-		//return;
 	}
 	if (id > 31 || id < 0 || context_container[id] == nullptr) {
 		throw SGLInvalidValueException("Invalid context id.");
-		//error_code = SGL_INVALID_VALUE;
-		//return;
 	}
 	context_container[id] = nullptr;
 	context_count--;
@@ -78,8 +69,6 @@ void ContextManager::SetContext(int& id) {
 int ContextManager::GetContext() {
 	if (current_context == nullptr) {
 		throw SGLInvalidOperationException("No context has been allocated.");
-		//error_code = SGL_INVALID_OPERATION;
-		//return -1;
 	}
 	return current_context_idx;
 };
