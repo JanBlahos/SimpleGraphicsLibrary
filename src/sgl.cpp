@@ -76,7 +76,7 @@ void sglInit(void) {
 void sglFinish(void) {}
 
 int sglCreateContext(int width, int height) {
-    int ret;
+    int ret = -1;
     try {
         ret = cm.CreateContext(width, height);
     }
@@ -113,7 +113,7 @@ void sglSetContext(int id) {
 }
 
 int sglGetContext(void) {
-    int ret;
+    int ret = -1;
     try {
         ret = cm.GetContext();
     }
@@ -183,7 +183,7 @@ void sglBegin(sglEElementType mode) {
 }
 
 void sglEnd(void) {
-    sglEErrorCode error = SGL_NO_ERROR;
+    //sglEErrorCode error = SGL_NO_ERROR;
     Context* cc = cm.current_context;
     if (cc == nullptr) {
         setErrCode(SGL_INVALID_OPERATION);
@@ -240,10 +240,10 @@ void sglMatrixMode(sglEMatrixMode mode) {
         switch (mode) {
 
         case(sglEMatrixMode::SGL_PROJECTION):
-            cc->matrix_stack.SetMode(false);
+            ms.SetMode(false);
             break;
         default:
-            cc->matrix_stack.SetMode(true);
+            ms.SetMode(true);
             break;
         }
     } else { //no context allocated yet
@@ -341,6 +341,7 @@ void sglMultMatrix(const float *matrix) {
     try {
         mat = ms.Top();
         temp_mat = std::make_shared<Matrix>(4, 4, matrix);
+        mat->Matmul(temp_mat);
     }
     catch (MatrixStackUnderflowException& ex1) {
         std::cerr << ex1.what() << std::endl;
@@ -350,10 +351,13 @@ void sglMultMatrix(const float *matrix) {
         std::cerr << ex2.what() << std::endl;
         setErrCode(SGL_OUT_OF_MEMORY);
     }
+    catch (BadDimensionException& ex3) {
+        std::cerr << ex3.what() << std::endl;
+        setErrCode(SGL_INTERNAL_ERROR);
+    }
     if (sglGetError() > SGL_NO_ERROR) {
         return;
     }
-    mat->Matmul(temp_mat);
   }
 
 void sglTranslate(float x, float y, float z) {
@@ -370,6 +374,7 @@ void sglTranslate(float x, float y, float z) {
     try {
         mat = ms.Top();
         temp_mat = Matrix::Translation3D(x, y, z);
+        mat->Matmul(temp_mat);
     }
     catch (MatrixStackUnderflowException& ex1) {
         std::cerr << ex1.what() << std::endl;
@@ -379,10 +384,13 @@ void sglTranslate(float x, float y, float z) {
         std::cerr << ex2.what() << std::endl;
         setErrCode(SGL_OUT_OF_MEMORY);
     }
+    catch (BadDimensionException& ex3) {
+        std::cerr << ex3.what() << std::endl;
+        setErrCode(SGL_INTERNAL_ERROR);
+    }
     if (sglGetError() > SGL_NO_ERROR) {
         return;
     }
-    mat->Matmul(temp_mat);
     //Matrix::PrintMatrix(mat);
 }
 
@@ -400,6 +408,7 @@ void sglScale(float scalex, float scaley, float scalez) {
     try {
         mat = ms.Top();
         temp_mat = Matrix::Scale(3, scalex, scaley, scalez);
+        mat->Matmul(temp_mat);
     }
     catch (MatrixStackUnderflowException& ex1) {
         std::cerr << ex1.what() << std::endl;
@@ -409,14 +418,23 @@ void sglScale(float scalex, float scaley, float scalez) {
         std::cerr << ex2.what() << std::endl;
         setErrCode(SGL_OUT_OF_MEMORY);
     }
+    catch (BadDimensionException& ex3) {
+        std::cerr << ex3.what() << std::endl;
+        setErrCode(SGL_INTERNAL_ERROR);
+    }
     if (sglGetError() > SGL_NO_ERROR) {
         return;
     }
-    mat->Matmul(temp_mat);
     //Matrix::PrintMatrix(mat);
 }
 
 void sglRotate2D(float angle, float centerx, float centery) {
+    Context* cc = cm.current_context;
+    if (cc == nullptr) {
+        setErrCode(SGL_INVALID_OPERATION);
+        return;
+    }
+    MatrixStack& ms = cc->matrix_stack;
     std::shared_ptr<Matrix> mat;
     std::shared_ptr<Matrix> temp_mat;
     try {
@@ -428,6 +446,7 @@ void sglRotate2D(float angle, float centerx, float centery) {
         temp_mat = Matrix::Translation3D(centerx, centery, 0);
         temp_mat->Matmul(Matrix::Rotation3D(angle, sglAxis::Z_AXIS));
         temp_mat->Matmul(Matrix::Translation3D(-centerx, -centery, 0));
+        mat->Matmul(temp_mat);
         //Matrix::PrintMatrix(temp_mat);
     }
     catch (MatrixStackUnderflowException& ex1) {
@@ -438,10 +457,13 @@ void sglRotate2D(float angle, float centerx, float centery) {
         std::cerr << ex2.what() << std::endl;
         setErrCode(SGL_OUT_OF_MEMORY);
     }
+    catch (BadDimensionException& ex3) {
+        std::cerr << ex3.what() << std::endl;
+        setErrCode(SGL_INTERNAL_ERROR);
+    }
     if (sglGetError() > SGL_NO_ERROR) {
         return;
     }
-    mat->Matmul(temp_mat);
     //Matrix::PrintMatrix(mat);
 }
 
@@ -459,6 +481,7 @@ void sglRotateY(float angle) {
     try {
         mat = ms.Top();
         temp_mat = Matrix::Rotation3D(angle, sglAxis::Y_AXIS);
+        mat->Matmul(temp_mat);
     }
     catch (MatrixStackUnderflowException& ex1) {
         std::cerr << ex1.what() << std::endl;
@@ -468,10 +491,13 @@ void sglRotateY(float angle) {
         std::cerr << ex2.what() << std::endl;
         setErrCode(SGL_OUT_OF_MEMORY);
     }
+    catch (BadDimensionException& ex3) {
+        std::cerr << ex3.what() << std::endl;
+        setErrCode(SGL_INTERNAL_ERROR);
+    }
     if (sglGetError() > SGL_NO_ERROR) {
         return;
     }
-    mat->Matmul(temp_mat);
 }
 
 void sglOrtho(float left, float right, float bottom, float top, float near, float far) {
@@ -488,6 +514,7 @@ void sglOrtho(float left, float right, float bottom, float top, float near, floa
     try {
         mat = ms.Top();
         temp_mat = Matrix::Orthographic3D(left, right, bottom, top, near, far);
+        mat->Matmul(temp_mat);
     }
     catch (MatrixStackUnderflowException& ex1) {
         std::cerr << ex1.what() << std::endl;
@@ -497,10 +524,13 @@ void sglOrtho(float left, float right, float bottom, float top, float near, floa
         std::cerr << ex2.what() << std::endl;
         setErrCode(SGL_OUT_OF_MEMORY);
     }
+    catch (BadDimensionException& ex3) {
+        std::cerr << ex3.what() << std::endl;
+        setErrCode(SGL_INTERNAL_ERROR);
+    }
     if (sglGetError() > SGL_NO_ERROR) {
         return;
     }
-    mat->Matmul(temp_mat);
 }
 
 void sglFrustum(float left, float right, float bottom, float top, float near, float far) {}
@@ -590,56 +620,23 @@ void sglSphere(const float x,
                const float z,
                const float radius)
 {
-    //scale and transform the coordinates first the radius first
+    Context* cc = cm.current_context;
+    if (cc == nullptr) {
+        setErrCode(SGL_INVALID_OPERATION);
+        return;
+    }
+    //MatrixStack& ms = cc->matrix_stack;
+    //scale and transform the coordinates and the radius first
     try {
-        auto mat = ms.Top();
-        //square root of determinant of the upper left 2x2 part of the matrix
-        // times radius is the new radius
-        auto new_radius = radius * sqrt((*mat)(0, 0) * (*mat)(1, 1) - ((*mat)(1, 0) * (*mat)(0, 1)));
-        std::shared_ptr<Vec4> original_vec(new Vec4(x, y, z, 1));
-        auto temp_vec = mat->Matmul(original_vec);
-        auto new_x = temp_vec->x;
-        auto new_y = temp_vec->y;
-        // draw the "first octant" starting point
-        int current_x = round(new_x);
-        //if y == 0 is at the bottom of the screen otherwise it would be added
-        int current_y = round(new_y + new_radius);
-        //initialize the Bressenham algorithm constants
-        int dvex = 3 + 2 * new_x;
-        int dvey = 2 * current_y - 2;
-        //starting decision constant if you put current_x and 
-        // current_y into the parametric circle equation
-        int p = (current_x * current_x) + 2 * current_x + 1 
-            + (new_y * new_y) + 2 * (new_y * new_radius)
-             - new_y - new_radius;
-        // (current_x * current_x) + 2 * current_x + 1 
-        //+(new_y * new_y) - 2 * (new_y * new_radius)
-        // - new_y + new_radius; if y == 0 is at the top of the screen
-
-        while (current_x <= current_y) {
-            //draw the 8 symmetrical vertices
-            sglVertex4f(current_x, current_y, z, 1);
-            sglVertex4f(new_x - current_x, current_y, z, 1);
-            sglVertex4f(current_x, new_y - current_y, z, 1);
-            sglVertex4f(new_x  - current_x, new_y - current_y, z, 1);
-            sglVertex4f(current_y, current_x, z, 1);
-            sglVertex4f(new_y - current_y, current_x, z, 1);
-            sglVertex4f(current_y, new_x - current_x, z, 1);
-            sglVertex4f(new_y - current_y, new_x - current_x, z, 1);
-            if (p > 0) {
-                p = p - dvey;
-                dvey = dvey - 2;
-                current_y = current_y - 2;
-            }
-            p = p + dvex;
-            dvex = dvex + 2;
-            current_x = current_x + 1;
-
-        }
+        cc->BresenhamCircle(x, y, z, radius);
     }
     catch (MatrixStackUnderflowException& ex1) {
         std::cerr << ex1.what() << std::endl;
         setErrCode(SGL_STACK_UNDERFLOW);
+    }
+    catch (SGLInvalidOperationException& ex2) {
+        std::cerr << ex2.what() << std::endl;
+        setErrCode(SGL_INVALID_OPERATION);
     }
 }
 

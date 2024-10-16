@@ -25,11 +25,11 @@ void Context::BeginDrawing(sglEElementType mode) {
 	PVM_matrix = Matrix::Eye(4);
 
 	matrix_stack.SetMode(SGL_PROJECTION);
-	auto& p = matrix_stack.Top();
+	auto p = matrix_stack.Top();
 	PVM_matrix->Matmul(p);
 
 	matrix_stack.SetMode(SGL_MODELVIEW);
-	auto& vm = matrix_stack.Top();
+	auto vm = matrix_stack.Top();
 	PVM_matrix->Matmul(vm);
 
 	Vp_matrix = matrix_stack.GetViewport();
@@ -56,22 +56,24 @@ void Context::EndDrawing() {
 
 void Context::BufferVertex4f(float x, float y, float z, float w) {
 	//tranform to screen
-	auto& vec_in_screen = Matrix::Eye(4);
-	auto& v = std::make_shared<Vec4>(x, y, z, w);
+	auto transform_matrix = Matrix::Eye(4);
+	auto v = std::make_shared<Vec4>(x, y, z, w);
 
-	vec_in_screen->Matmul(Vp_matrix);
-	for (int i = 0; i < 16; ++i) {
+	transform_matrix->Matmul(Vp_matrix);
+	/*for (int i = 0; i < 16; ++i) {
 		std::cout << vec_in_screen->GetData()[i] << " ";
 	}
-	std::cout << "\n";
+	std::cout << "\n";*/
 
-	//TODO perspective division
-	vec_in_screen->Matmul(PVM_matrix);
-	vec_in_screen->Matmul(v);
+	transform_matrix->Matmul(PVM_matrix);
+	//Matrix::PrintMatrix(transform_matrix);
+	v->PerspectiveDivide();
+	auto vec_in_screen = transform_matrix->Matmul(v);
+	//Vec4::PrintVector(vec_in_screen);
 
 	float _tx, _ty;
-	_tx = vec_in_screen->GetData()[0];
-	_ty = vec_in_screen->GetData()[1];
+	_tx = vec_in_screen->x;
+	_ty = vec_in_screen->y;
 	int tx, ty;
 	//TODO perhaps round elsewhere?
 	tx = std::round(_tx);

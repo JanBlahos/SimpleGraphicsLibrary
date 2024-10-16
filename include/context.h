@@ -20,7 +20,7 @@ typedef struct {
 class Context
 {
 public:
-	Context(int width, int height);
+	Context(unsigned width, unsigned height);
 
 	float* GetColorBufferPtr(void);
 
@@ -38,6 +38,8 @@ public:
 
 	void BufferVertex2f(float x, float y);
 
+	void BresenhamCircle(float x, float y, float z, float radius);
+
 	void SetDrawingColor(float r, float g, float b);
 
 	void SetPointSize(float size);
@@ -47,8 +49,8 @@ public:
 
 	MatrixStack matrix_stack;
 private:
-	int win_width;
-	int win_height;
+	unsigned win_width;
+	unsigned win_height;
 
 	bool is_drawing;
 	Color clear_color;

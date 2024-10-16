@@ -170,7 +170,7 @@ void Matrix::PrintMatrix(std::shared_ptr<Matrix> matrix) {
 /// Implemented naively for now. For speed will need to optimize this
 /// </summary>
 void Matrix::Matmul(std::shared_ptr<Matrix> multiplicand) {
-	Matrix::PrintMatrix(multiplicand);
+	//Matrix::PrintMatrix(multiplicand);
 	auto other_dimensions = multiplicand->GetDimensions();
 	auto other_cols = other_dimensions.second;
 	if (_ncols != other_dimensions.first) {
@@ -223,7 +223,7 @@ std::shared_ptr<Vec4> Matrix::Matmul(std::shared_ptr<Vec4> multiplicand) {
 	_ncols = 0;
 	//delete[] _data;
 	auto result = std::make_shared<Vec4>(Vec4(vec_data[0], vec_data[1], vec_data[2], vec_data[3]));
-	Vec4::PrintVector(result);
+	//Vec4::PrintVector(result);
 	return result;
 }
 
