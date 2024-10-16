@@ -109,17 +109,16 @@ void Context::BresenhamLine(int x1, int y1, int x2, int y2) {
 	//Pseudocode can be found on Wikipedia: https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
 
 	//std::cout << "Beggining line drawing" << std::endl;
-	/*if (use_incremental_error) {
-		int dx = abs(x2 - x1);
-		int dy = abs(y2 - y1);
+	if (use_incremental_error) {
+		int dx = std::abs(x2 - x1);
+		int dy = -std::abs(y2 - y1);
 
 		int sx = (x1 < x2) ? 1 : -1;
 		int sy = (y1 < y2) ? 1 : -1;
 
-		int err = dx - dy;
+		int err = dx + dy;
 
 		while (true) {
-			//std::cout << "Setting pixel" << x1 << " " << y1 <<  " goal is " << x2 << " " << y2 << std::endl;
 			SetPixel(x1, y1);
 
 			if (x1 == x2 && y1 == y2) break;
@@ -136,7 +135,7 @@ void Context::BresenhamLine(int x1, int y1, int x2, int y2) {
 			}
 		}
 		return;
-	}*/
+	}
 	if (std::abs(y2 - y1) < std::abs(x2 - x1)) {
 		if (x1 > x2) {
 			PlotLineX(x2, y2, x1, y1);
