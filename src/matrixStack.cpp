@@ -5,6 +5,7 @@
 
 MatrixStack::MatrixStack() {
 	use_modelView_ = true;
+	viewPort_ = NULL;
 };
 
 MatrixStack::~MatrixStack() {
@@ -13,6 +14,10 @@ MatrixStack::~MatrixStack() {
 	}
 	while (!projection_stack_.empty()) {
 		projection_stack_.pop();
+	}
+	if (viewPort_ != NULL) {
+		delete viewPort_;
+		viewPort_ = NULL;
 	}
 }
 
@@ -25,12 +30,14 @@ std::shared_ptr<Matrix> MatrixStack::Top() {
 		if (modelView_stack_.empty()) {
 			throw MatrixStackUnderflowException("No matrices were allocated yet on the Model View stack");
 		}
+		//std::cout << "Returning model view" << std::endl;
 		return modelView_stack_.top();
 	}
 	else {
 		if (projection_stack_.empty()) {
 			throw MatrixStackUnderflowException("No matrices were allocated yet on the Projection stack");
 		}
+		//std::cout << "Returning projection" << std::endl;
 		return projection_stack_.top();
 	}
 }
@@ -74,8 +81,14 @@ void MatrixStack::Duplicate() {
 }
 
 std::shared_ptr<Matrix> MatrixStack::GetViewport() {
-	return viewPort_;
+	auto dims = viewPort_->GetDimensions();
+	auto data = viewPort_->GetData();
+	auto ret = std::make_shared<Matrix>(dims.first, dims.second, data);
+	//Matrix::PrintMatrix(ret);
+	return ret;
 }
 void MatrixStack::SetViewport(std::shared_ptr<Matrix> viewPort) {
-	viewPort_ = viewPort;
+	auto dims = viewPort->GetDimensions();
+	auto data = viewPort->GetData();
+	viewPort_ = new Matrix (dims.first, dims.second, data);
 }

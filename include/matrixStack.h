@@ -60,5 +60,5 @@ private:
 	bool use_modelView_;
 	std::stack <std::shared_ptr<Matrix>> modelView_stack_;
 	std::stack <std::shared_ptr<Matrix>> projection_stack_;
-	std::shared_ptr<Matrix> viewPort_;
+	Matrix *viewPort_;
 };

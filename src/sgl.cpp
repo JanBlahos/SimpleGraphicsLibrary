@@ -513,7 +513,7 @@ void sglOrtho(float left, float right, float bottom, float top, float near, floa
     std::shared_ptr<Matrix> temp_mat;
     try {
         mat = ms.Top();
-        temp_mat = Matrix::Orthographic3D(left, right, bottom, top, near, far);
+        temp_mat = Matrix::Orthographic3D(left, right, top, bottom, near, far);
         mat->Matmul(temp_mat);
     }
     catch (MatrixStackUnderflowException& ex1) {

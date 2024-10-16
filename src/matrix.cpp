@@ -157,6 +157,7 @@ const float* Matrix::GetData() {
 
 void Matrix::PrintMatrix(std::shared_ptr<Matrix> matrix) {
 	auto dims = matrix->GetDimensions();
+	std::cout << "Matrix dims " << dims.first << "x" << dims.second << std::endl;
 	for (unsigned i = 0; i < dims.second; i++) {
 		for (unsigned j = 0; j < dims.first; j++) {
 			std::cout << (*matrix)(j, i) << " ";
@@ -296,6 +297,8 @@ std::shared_ptr<Matrix> Matrix::Translation3D(float x, float y, float z) {
 
 std::shared_ptr<Matrix> Matrix::Orthographic3D(float left, float right, float top
 	, float bottom, float near, float far) {
+	//std::cout << "Given parameters: " << " left: " << left << " right: " << right
+		//<< " bottom: " << bottom << " top: " << top << " near: " << near << " far: " << far << std::endl;
 	std::shared_ptr<Matrix> matrix(new Matrix(4, 4));
 	auto side_difference = right - left;
 	auto top_difference = top - bottom;
@@ -303,9 +306,9 @@ std::shared_ptr<Matrix> Matrix::Orthographic3D(float left, float right, float to
 	(*matrix)(0, 0) = 2 / side_difference;
 	(*matrix)(1, 1) = 2 / top_difference;
 	(*matrix)(2, 2) = -2 / plane_difference;
-	(*matrix)(0, 3) = -right - left / side_difference;
-	(*matrix)(1, 3) = -top - bottom / top_difference;
-	(*matrix)(2, 3) = far - near / plane_difference;
+	(*matrix)(0, 3) = -(right + left) / side_difference;
+	(*matrix)(1, 3) = -(top + bottom) / top_difference;
+	(*matrix)(2, 3) = -(far + near) / plane_difference;
 	(*matrix)(3, 3) = 1;
 	//Matrix::PrintMatrix(matrix);
 	return matrix;

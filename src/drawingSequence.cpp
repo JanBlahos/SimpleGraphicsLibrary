@@ -24,15 +24,22 @@ void Context::BeginDrawing(sglEElementType mode) {
 	//get viewport and PVM matrices
 	PVM_matrix = Matrix::Eye(4);
 
-	matrix_stack.SetMode(SGL_PROJECTION);
+	//WATCH OUT! When not using the SGL wrapper 
+	// function it expect boolean so using SGL_PROJECTION
+	// here will cause the stacks to be switched.
+	matrix_stack.SetMode(false);
 	auto p = matrix_stack.Top();
+	//Matrix::PrintMatrix(p);
 	PVM_matrix->Matmul(p);
 
-	matrix_stack.SetMode(SGL_MODELVIEW);
+	matrix_stack.SetMode(true);
 	auto vm = matrix_stack.Top();
+    //Matrix::PrintMatrix(vm);
 	PVM_matrix->Matmul(vm);
+	//Matrix::PrintMatrix(PVM_matrix);
 
 	Vp_matrix = matrix_stack.GetViewport();
+	//Matrix::PrintMatrix(Vp_matrix);
 
 };
 
@@ -59,7 +66,8 @@ void Context::BufferVertex4f(float x, float y, float z, float w) {
 	auto transform_matrix = Matrix::Eye(4);
 	auto v = std::make_shared<Vec4>(x, y, z, w);
 
-	transform_matrix->Matmul(Vp_matrix);
+	//transform_matrix->Matmul(Vp_matrix);
+	//Matrix::PrintMatrix(transform_matrix);
 	/*for (int i = 0; i < 16; ++i) {
 		std::cout << vec_in_screen->GetData()[i] << " ";
 	}
@@ -67,8 +75,14 @@ void Context::BufferVertex4f(float x, float y, float z, float w) {
 
 	transform_matrix->Matmul(PVM_matrix);
 	//Matrix::PrintMatrix(transform_matrix);
-	v->PerspectiveDivide();
-	auto vec_in_screen = transform_matrix->Matmul(v);
+	//std::cout << "Multiplying vector " << std::endl;
+	//Vec4::PrintVector(v);
+	//std::cout << "with matrix" << std::endl;
+	//Matrix::PrintMatrix(transform_matrix);
+	auto transformed_vec = transform_matrix->Matmul(v);
+	transformed_vec->PerspectiveDivide();
+	auto vec_in_screen = Vp_matrix->Matmul(transformed_vec);
+	//std::cout << " result: " << std::endl;
 	//Vec4::PrintVector(vec_in_screen);
 
 	float _tx, _ty;
