@@ -129,6 +129,18 @@ Matrix::Matrix(unsigned rows, unsigned cols) {
 	_data.fill(0.0f);
 }
 
+Matrix::Matrix(unsigned rows, unsigned cols, const float* data) {
+	if (rows < 1 || cols < 1) {
+		throw BadDimensionException("Attempting to create matrix with invalid dimensions "
+			+ std::to_string(rows) + "x" + std::to_string(cols));
+	}
+	_nrows = rows;
+	_ncols = cols;
+	for (unsigned i = 0; i < rows * cols; i++) {
+		_data[i] = data[i];
+	}
+}
+
 Matrix::Matrix(unsigned rows, unsigned cols, const std::array<float, 16>& data) {
 	if (rows < 1 || cols < 1) {
 		throw BadDimensionException("Attempting to create matrix with invalid dimensions "
@@ -182,7 +194,7 @@ void Matrix::PrintMatrix(const Matrix& matrix) {
 /// <summary>
 /// Implemented naively for now. For speed will need to optimize this
 /// </summary>
-static Matrix Matmul(const Matrix& left, const Matrix& right) {
+Matrix Matrix::Matmul(const Matrix& left, const Matrix& right) {
 	auto left_dimensions = left.GetDimensions();
 	auto right_dimensions = right.GetDimensions();
 	unsigned left_rows, left_cols, right_rows, right_cols;
@@ -211,9 +223,11 @@ static Matrix Matmul(const Matrix& left, const Matrix& right) {
 			//_data[j + i * _nrows] = sum;
 		}
 	}
+
+	return result;
 }
 
-static Vec4 Matmul(Matrix& mat, const Vec4& vec) {
+Vec4 Matrix::Matmul(Matrix& mat, const Vec4& vec) {
 	// also works with 3x3 and 2x2 matrices,
 	// in which case the appropriate components of the output
 	// will be zeroed.
@@ -241,7 +255,7 @@ static Vec4 Matmul(Matrix& mat, const Vec4& vec) {
 	return Vec4(vec_data[0], vec_data[1], vec_data[2], vec_data[3]);
 }
 
-static Matrix Eye(unsigned rows) {
+Matrix Matrix::Eye(unsigned rows) {
 	Matrix mat(rows, rows);
 	for (unsigned i = 0; i < rows; i++) {
 		mat(i, i) = 1;
@@ -249,7 +263,7 @@ static Matrix Eye(unsigned rows) {
 	return mat;
 }
 
-static Matrix Scale(float scaleX, float scaleY, float scaleZ) {
+Matrix Matrix::Scale(float scaleX, float scaleY, float scaleZ) {
 	Matrix mat;
 	mat(0, 0) = scaleX;
 	mat(1, 1) = scaleY;
@@ -258,7 +272,7 @@ static Matrix Scale(float scaleX, float scaleY, float scaleZ) {
 	return mat;
 }
 
-static Matrix Rotation3D(float angle, sglAxis axis) {
+Matrix Matrix::Rotation3D(float angle, sglAxis axis) {
 	//C++ sin and cos need input in radians so convert angle first
 	//float rads = angle * PI / 180;
 	float cosangle = std::cos(angle);
@@ -288,7 +302,7 @@ static Matrix Rotation3D(float angle, sglAxis axis) {
 }
 
 
-static Matrix Translation3D(float x, float y, float z) {
+Matrix Matrix::Translation3D(float x, float y, float z) {
 	Matrix mat = Matrix::Eye(4);
 	mat(0, 3) = x;
 	mat(1, 3) = y;
@@ -296,7 +310,7 @@ static Matrix Translation3D(float x, float y, float z) {
 	return mat;
 }
 
-static Matrix Orthographic3D(float left, float right, float top
+Matrix Matrix::Orthographic3D(float left, float right, float top
 	, float bottom, float near, float far) {
 
 	Matrix mat;
@@ -314,7 +328,7 @@ static Matrix Orthographic3D(float left, float right, float top
 	return mat;
 }
 
-static Matrix Viewport(int x, int y, int width, int height) {
+Matrix Matrix::Viewport(int x, int y, int width, int height) {
 	auto width_half = width / 2;
 	auto height_half = height / 2;
 	Matrix mat;
@@ -328,7 +342,7 @@ static Matrix Viewport(int x, int y, int width, int height) {
 	return mat;
 }
 
-static Matrix LookAt(const Vec4& eye, const Vec4& center, const Vec4& up) {
+Matrix Matrix::LookAt(const Vec4& eye, const Vec4& center, const Vec4& up) {
 	Matrix mat;
 	Vec4 zaxis = eye - center;
 	zaxis.normalize();
@@ -349,7 +363,7 @@ static Matrix LookAt(const Vec4& eye, const Vec4& center, const Vec4& up) {
 	return mat;
 }
 
-static Matrix RotateAroundCenter(float x, float y, float angle) {
+Matrix Matrix::RotateAroundCenter(float x, float y, float angle) {
 	//to perform rotation with a point given as center first translate to point to 
 	// be at the origin of coordinate system, rotate and then translate back
 	// however, because of matrix transformations being applied from right

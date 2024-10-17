@@ -148,6 +148,15 @@ public:
 	Matrix(unsigned rows, unsigned cols);
 
 	/// <summary>
+	///  Instantiate a matrix of shape rows x cols.
+	/// The matrix data is stored in a column major order.
+	/// </summary>
+	/// <param name="rows"> Number of rows of the matrix</param>
+	/// <param name="cols"> Number of columns of the matrix</param>
+	/// <param name="data"> Data to be passed to the matrix</param>
+	Matrix(unsigned rows, unsigned cols, const float* data);
+
+	/// <summary>
 	///  Instantiate a matrix of shape rows x cols and fill it with given data.
 	/// The matrix data is stored in a column major order.
 	/// </summary>

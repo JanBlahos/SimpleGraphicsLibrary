@@ -95,11 +95,12 @@ private:
 	std::vector<float> depth_buffer;
 
 	std::deque<Point2D> vertex_buffer;
+
 	//the first specified point during Begin() End() sequence
 	Point2D first_point;
 
-	std::shared_ptr<Matrix> PVM_matrix;
-	std::shared_ptr<Matrix> Vp_matrix;
+	Matrix PVM_matrix;
+	Matrix Vp_matrix;
 
 	bool use_incremental_error;
 

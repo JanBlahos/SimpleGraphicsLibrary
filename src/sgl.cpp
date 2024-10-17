@@ -13,6 +13,7 @@
 #include "context.h"
 #include "exceptions.h"
 #include "matrix.h"
+#include "matrixStack.h"
 #include <iostream>
 
 ContextManager cm;
@@ -292,10 +293,10 @@ void sglMatrixMode(sglEMatrixMode mode) {
         switch (mode) {
 
         case(sglEMatrixMode::SGL_PROJECTION):
-            ms.SetMode(false);
+            ms.SetMode(SGL_PROJECTION);
             break;
         default:
-            ms.SetMode(true);
+            ms.SetMode(SGL_MODELVIEW);
             break;
         }
     } else { //no context allocated yet
@@ -351,8 +352,8 @@ void sglLoadIdentity(void) {
     MatrixStack& ms = cc->matrix_stack;
 
     try {
-        auto matrix = Matrix::Eye(4);
-        ms.Push(matrix);
+        //TODO perhaps this should change stack top?
+        ms.Push(Matrix::Eye(4));
     }
     catch (OutOfMemoryException& ex1) {
         std::cerr << ex1.what() << std::endl;
@@ -370,8 +371,7 @@ void sglLoadMatrix(const float *matrix) {
     MatrixStack& ms = cc->matrix_stack;
 
     try {
-        auto mat = std::make_shared<Matrix>(4, 4, matrix);
-        ms.Push(mat);
+        ms.Push(Matrix(4, 4, matrix));
     }
     catch (OutOfMemoryException& ex1) {
         std::cerr << ex1.what() << std::endl;
@@ -388,12 +388,13 @@ void sglMultMatrix(const float *matrix) {
 
     MatrixStack& ms = cc->matrix_stack;
 
-    std::shared_ptr<Matrix> mat;
-    std::shared_ptr<Matrix> temp_mat;
     try {
-        mat = ms.Top();
-        temp_mat = std::make_shared<Matrix>(4, 4, matrix);
-        mat->Matmul(temp_mat);
+        const Matrix& mat = ms.Top();
+        //TODO implement multiplication by (const float* matrix) to avoid copying
+        Matrix new_mat = Matrix::Matmul(ms.Top(), Matrix(4, 4, matrix));
+        ms.Pop();
+        ms.Push(new_mat);
+
     }
     catch (MatrixStackUnderflowException& ex1) {
         std::cerr << ex1.what() << std::endl;
@@ -421,12 +422,11 @@ void sglTranslate(float x, float y, float z) {
 
     MatrixStack& ms = cc->matrix_stack;
 
-    std::shared_ptr<Matrix> mat;
-    std::shared_ptr<Matrix> temp_mat;
     try {
-        mat = ms.Top();
-        temp_mat = Matrix::Translation3D(x, y, z);
-        mat->Matmul(temp_mat);
+        const Matrix& mat = ms.Top();
+        Matrix new_mat = Matrix::Matmul(ms.Top(), Matrix::Translation3D(x, y, z));
+        ms.Pop();
+        ms.Push(new_mat);
     }
     catch (MatrixStackUnderflowException& ex1) {
         std::cerr << ex1.what() << std::endl;
@@ -443,7 +443,6 @@ void sglTranslate(float x, float y, float z) {
     if (sglGetError() > SGL_NO_ERROR) {
         return;
     }
-    //Matrix::PrintMatrix(mat);
 }
 
 void sglScale(float scalex, float scaley, float scalez) {
@@ -455,12 +454,11 @@ void sglScale(float scalex, float scaley, float scalez) {
 
     MatrixStack& ms = cc->matrix_stack;
 
-    std::shared_ptr<Matrix> mat;
-    std::shared_ptr<Matrix> temp_mat;
     try {
-        mat = ms.Top();
-        temp_mat = Matrix::Scale(3, scalex, scaley, scalez);
-        mat->Matmul(temp_mat);
+        const Matrix& mat = ms.Top();
+        Matrix new_mat = Matrix::Matmul(ms.Top(), Matrix::Scale(scalex, scaley, scalez));
+        ms.Pop();
+        ms.Push(new_mat);
     }
     catch (MatrixStackUnderflowException& ex1) {
         std::cerr << ex1.what() << std::endl;
@@ -477,7 +475,6 @@ void sglScale(float scalex, float scaley, float scalez) {
     if (sglGetError() > SGL_NO_ERROR) {
         return;
     }
-    //Matrix::PrintMatrix(mat);
 }
 
 void sglRotate2D(float angle, float centerx, float centery) {
@@ -487,11 +484,12 @@ void sglRotate2D(float angle, float centerx, float centery) {
         return;
     }
     MatrixStack& ms = cc->matrix_stack;
-    std::shared_ptr<Matrix> mat;
+
     try {
-        mat = ms.Top();
-        mat->Matmul(Matrix::RotateAroundCenter(centerx, centery, angle));
-        //Matrix::PrintMatrix(temp_mat);
+        const Matrix& mat = ms.Top();
+        Matrix new_mat = Matrix::Matmul(ms.Top(), Matrix::RotateAroundCenter(centerx, centery, angle));
+        ms.Pop();
+        ms.Push(new_mat);
     }
     catch (MatrixStackUnderflowException& ex1) {
         std::cerr << ex1.what() << std::endl;
@@ -508,7 +506,6 @@ void sglRotate2D(float angle, float centerx, float centery) {
     if (sglGetError() > SGL_NO_ERROR) {
         return;
     }
-    //Matrix::PrintMatrix(mat);
 }
 
 void sglRotateY(float angle) {
@@ -520,12 +517,11 @@ void sglRotateY(float angle) {
 
     MatrixStack& ms = cc->matrix_stack;
 
-    std::shared_ptr<Matrix> mat;
-    std::shared_ptr<Matrix> temp_mat;
     try {
-        mat = ms.Top();
-        temp_mat = Matrix::Rotation3D(angle, sglAxis::Y_AXIS);
-        mat->Matmul(temp_mat);
+        const Matrix& mat = ms.Top();
+        Matrix new_mat = Matrix::Matmul(ms.Top(), Matrix::Rotation3D(angle, sglAxis::Y_AXIS));
+        ms.Pop();
+        ms.Push(new_mat);
     }
     catch (MatrixStackUnderflowException& ex1) {
         std::cerr << ex1.what() << std::endl;
@@ -553,12 +549,11 @@ void sglOrtho(float left, float right, float bottom, float top, float near, floa
 
     MatrixStack& ms = cc->matrix_stack;
 
-    std::shared_ptr<Matrix> mat;
-    std::shared_ptr<Matrix> temp_mat;
     try {
-        mat = ms.Top();
-        temp_mat = Matrix::Orthographic3D(left, right, top, bottom, near, far);
-        mat->Matmul(temp_mat);
+        const Matrix& mat = ms.Top();
+        Matrix new_mat = Matrix::Matmul(ms.Top(), Matrix::Orthographic3D(left, right, top, bottom, near, far));
+        ms.Pop();
+        ms.Push(new_mat);
     }
     catch (MatrixStackUnderflowException& ex1) {
         std::cerr << ex1.what() << std::endl;
@@ -588,9 +583,8 @@ void sglViewport(int x, int y, int width, int height) {
 
     MatrixStack& ms = cc->matrix_stack;
 
-    std::shared_ptr<Matrix> mat;
     try {
-        mat = Matrix::Viewport(x, y, width, height);
+        ms.SetViewport(Matrix::Viewport(x, y, width, height));
     }
     catch (OutOfMemoryException& ex2) {
         std::cerr << ex2.what() << std::endl;
@@ -599,8 +593,6 @@ void sglViewport(int x, int y, int width, int height) {
     if (sglGetError() > SGL_NO_ERROR) {
         return;
     }
-    ms.SetViewport(mat);
-    //Matrix::PrintMatrix(mat);
 }
 
 //---------------------------------------------------------------------------

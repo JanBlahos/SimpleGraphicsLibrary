@@ -4,6 +4,8 @@
 // handling the matrix transformation stack and its switching
 //---------------------------------------------------------------------------
 
+#ifndef _MATRIX_STACK_H_
+#define _MATRIX_STACK_H_
 #include "matrix.h"
 #include <stack>
 #include <sgl.h>
@@ -63,3 +65,5 @@ private:
 	std::stack <Matrix> P_stack_;
 	Matrix viewPort_;
 };
+
+#endif // !_MATRIX_STACK_H_
