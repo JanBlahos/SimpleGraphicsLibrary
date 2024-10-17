@@ -12,8 +12,9 @@ void Vec4::PerspectiveDivide() {
 	z = z / w;
 	w = 1;
 }
-float Vec4::dot(std::shared_ptr<Vec4> vec) {
-	return x * vec->x + y * vec->y + z * vec->z;
+
+float Vec4::dot(const Vec4& vec) const {
+	return x * vec.x + y * vec.y + z * vec.z;
 }
 
 void Vec4::normalize() {
@@ -21,34 +22,59 @@ void Vec4::normalize() {
 	x = x / norm;
 	y = y / norm;
 	z = z / norm;
-
 }
-std::shared_ptr<Vec4> Vec4::operator* (float scalar) {
-	std::shared_ptr <Vec4> result(new Vec4(x * scalar, y * scalar, z * scalar, 1));
+
+Vec4 Vec4::operator* (float scalar) {
+	return Vec4{x*scalar, y*scalar, z*scalar, w*scalar};
+}
+
+Vec4& Vec4::operator*= (float scalar) {
+	x *= scalar;
+	y *= scalar;
+	z *= scalar;
+	w *= scalar;
+	return *this;
+}
+
+Vec4 Vec4::Cross3D(const Vec4& vec1, const Vec4& vec2) {
+	Vec4 result = Vec4(
+		vec1.y * vec2.z - (vec1.z * vec2.y),
+		vec1.z * vec2.x - (vec1.x * vec2.z),
+		vec1.x * vec2.y - (vec1.y * vec2.x),
+		1);
 	return result;
 }
 
-std::shared_ptr<Vec4> Vec4::Cross3D(std::shared_ptr<Vec4> vec1, std::shared_ptr<Vec4> vec2) {
-	std::shared_ptr <Vec4> result(new Vec4(vec1->y * vec2->z - (vec1->z * vec2->y),
-		vec1->z * vec2->x - (vec1->x * vec2->z),
-		vec1->x * vec2->y - (vec1->y * vec2->x), 1));
-	return result;
+Vec4 operator+ (Vec4 vec1, const Vec4& vec2) {
+	vec1 += vec2;
+	return vec1;
 }
 
-std::shared_ptr<Vec4> Vec4::operator+ (std::shared_ptr<Vec4> vec2) {
-	std::shared_ptr <Vec4> result(new Vec4(x + vec2->x, y + vec2->y, z + vec2->z, 1));
-	return result;
+Vec4& Vec4::operator+= (const Vec4& other) {
+	x += other.x;
+	y += other.y;
+	z += other.z;
+	w += other.w;
+	return *this;
 }
 
-std::shared_ptr<Vec4> Vec4::operator- (std::shared_ptr<Vec4> vec2) {
-	std::shared_ptr <Vec4> result(new Vec4(x - vec2->x, y - vec2->y, z - vec2->z, 1));
-	return result;
+Vec4 operator- (Vec4 vec1, const Vec4& vec2) {
+	vec1 -= vec2;
+	return vec1;
+}
+
+Vec4& Vec4::operator-= (const Vec4& other) {
+	x -= other.x;
+	y -= other.y;
+	z -= other.z;
+	w -= other.w;
+	return *this;
 }
 
 
-void Vec4::PrintVector(std::shared_ptr<Vec4> vec) {
+void Vec4::PrintVector(const Vec4& vec) {
 	for (unsigned i = 0; i < 4; i++) {
-		std::cout << (*vec)(i) << " ";
+		std::cout << vec(i) << " ";
 	}
 	std::cout << std::endl;
 	std::cout << "Finished printing vector" << std::endl;
@@ -59,16 +85,12 @@ float& Vec4::operator() (unsigned position) {
 	switch (position) {
 	case sglAxis::X_AXIS:
 		return x;
-		break;
 	case sglAxis::Y_AXIS:
 		return y;
-		break;
 	case sglAxis::Z_AXIS:
 		return z;
-		break;
 	case sglAxis::W_AXIS:
 		return w;
-		break;
 	default:
 		throw BadIndexException("Attempting to access vector at invalid position " + std::to_string(position));
 	}
@@ -78,20 +100,24 @@ float Vec4::operator() (unsigned position) const {
 	switch (position) {
 	case sglAxis::X_AXIS:
 		return x;
-		break;
 	case sglAxis::Y_AXIS:
 		return y;
-		break;
 	case sglAxis::Z_AXIS:
 		return z;
-		break;
 	case sglAxis::W_AXIS:
 		return w;
-		break;
 	default:
 		throw BadIndexException("Attempting to access vector at invalid position " + std::to_string(position));
 	}
 }
+
+Matrix::Matrix() {
+	_nrows = 4;
+	_ncols = 4;
+	_data.fill(0.0f);
+}
+
+Matrix::~Matrix() {}
 
 Matrix::Matrix(unsigned rows, unsigned cols) {
 	if (rows < 1 || cols < 1) {
@@ -100,33 +126,19 @@ Matrix::Matrix(unsigned rows, unsigned cols) {
 	}
 	_nrows = rows;
 	_ncols = cols;
-	try {
-		_data = new float[rows * cols]();
-	}
-	catch (std::bad_alloc& ex) {
-		throw OutOfMemoryException("Out of memory! Failed to allocate matrix of size "
-			+ std::to_string(_nrows) + "X" + std::to_string(_ncols));
-	}
-
+	_data.fill(0.0f);
 }
-Matrix::Matrix(unsigned rows, unsigned cols, const float* data) {
+
+Matrix::Matrix(unsigned rows, unsigned cols, const std::array<float, 16>& data) {
 	if (rows < 1 || cols < 1) {
 		throw BadDimensionException("Attempting to create matrix with invalid dimensions "
 			+ std::to_string(rows) + "x" + std::to_string(cols));
 	}
 	_nrows = rows;
 	_ncols = cols;
-	try {
-		_data = new float[rows * cols]();
-	}
-	catch (std::bad_alloc& ex) {
-		throw OutOfMemoryException("Out of memory! Failed to allocate matrix of size "
-			+ std::to_string(_nrows) + "X" + std::to_string(_ncols));
-	}
 	for (unsigned i = 0; i < rows * cols; i++) {
 		_data[i] = data[i];
 	}
-
 }
 
 float& Matrix::operator() (unsigned row, unsigned col) {
@@ -147,20 +159,20 @@ float Matrix::operator() (unsigned row, unsigned col) const {
 	return _data[col * _nrows + row];
 }
 
-std::pair<unsigned, unsigned> Matrix::GetDimensions() {
+std::pair<unsigned, unsigned> Matrix::GetDimensions() const {
 	return std::make_pair(_nrows, _ncols);
 }
 
-const float* Matrix::GetData() {
+const std::array<float, 16>& Matrix::GetData() const {
 	return _data;
 }
 
-void Matrix::PrintMatrix(std::shared_ptr<Matrix> matrix) {
-	auto dims = matrix->GetDimensions();
+void Matrix::PrintMatrix(const Matrix& matrix) {
+	auto dims = matrix.GetDimensions();
 	std::cout << "Matrix dims " << dims.first << "x" << dims.second << std::endl;
 	for (unsigned i = 0; i < dims.second; i++) {
 		for (unsigned j = 0; j < dims.first; j++) {
-			std::cout << (*matrix)(j, i) << " ";
+			std::cout << matrix(j, i) << " ";
 		}
 		std::cout << std::endl;
 	}
@@ -170,194 +182,182 @@ void Matrix::PrintMatrix(std::shared_ptr<Matrix> matrix) {
 /// <summary>
 /// Implemented naively for now. For speed will need to optimize this
 /// </summary>
-void Matrix::Matmul(std::shared_ptr<Matrix> multiplicand) {
-	//Matrix::PrintMatrix(multiplicand);
-	auto other_dimensions = multiplicand->GetDimensions();
-	auto other_cols = other_dimensions.second;
-	if (_ncols != other_dimensions.first) {
+static Matrix Matmul(const Matrix& left, const Matrix& right) {
+	auto left_dimensions = left.GetDimensions();
+	auto right_dimensions = right.GetDimensions();
+	unsigned left_rows, left_cols, right_rows, right_cols;
+	left_rows = left_dimensions.first;
+	left_cols = left_dimensions.second;
+	right_rows = right_dimensions.first;
+	right_cols = right_dimensions.second;
+
+
+	if (left_cols != right_rows) {
 		throw BadDimensionException("Attempting to multiply matrices with incompatible dimensions"
-			+ std::to_string(_nrows) + "x" + std::to_string(_ncols) + " and "
-			+ std::to_string(other_dimensions.first) + "x" + std::to_string(other_cols));
+			+ std::to_string(left_rows) + "x" + std::to_string(left_cols) + " and "
+			+ std::to_string(right_rows) + "x" + std::to_string(right_cols));
 	}
-	auto old_data = _data;
-	try {
-		_data = new float[_nrows * other_cols]();
-	}
-	catch (std::bad_alloc& ex) {
-		throw OutOfMemoryException("Out of memory! Failed to allocate matrix of size "
-			+ std::to_string(_nrows) + "X" + std::to_string(other_cols));
-	}
-	for (unsigned i = 0; i < other_cols; i++) {
-		for (unsigned j = 0; j < _nrows; j++) {
+
+	Matrix result;
+
+	for (unsigned i = 0; i < right_cols; ++i) {
+		for (unsigned j = 0; j < left_rows; ++j) {
 			float sum = 0;
-				for (unsigned k = 0; k < _ncols; k++) {
-					//std::cout << "Multiplicand at row " << k << " collumn " << i << " is " << (*multiplicand)(k, i) << std::endl;
-					//std::cout << "Old data at row " << j << " collumn " << k << " is "<< old_data[j + k * _nrows] << std::endl;
-					//std::cout << "Element is " << old_data[j + k * _nrows] * (*multiplicand)(k, i) << std::endl;
-					sum += old_data[j + k * _nrows] * (*multiplicand)(k, i);
-					//std::cout << "Partial sum " << sum << std::endl;
-					}
-				//std::cout << "Row " << j << " collumn " << i << "sum " << sum << std::endl;
-			_data[j + i * _nrows] = sum;
+			for (unsigned k = 0; k < left_cols; ++k) {
+				sum += left(j, k) * right(k, i); //TODO check
+				//sum += left.GetData()[j + k * left_rows] * right(k, i);
+			}
+			result(j, i) = sum; //TODO check
+			//_data[j + i * _nrows] = sum;
 		}
 	}
-	delete[] old_data;
 }
-std::shared_ptr<Vec4> Matrix::Matmul(std::shared_ptr<Vec4> multiplicand) {
+
+static Vec4 Matmul(Matrix& mat, const Vec4& vec) {
 	// also works with 3x3 and 2x2 matrices,
 	// in which case the appropriate components of the output
 	// will be zeroed.
-	if (_ncols > 4) {
+
+	auto mat_dims = mat.GetDimensions();
+	unsigned n_rows, n_cols;
+	n_rows = mat_dims.first;
+	n_cols = mat_dims.second;
+
+	if (n_cols > 4) {
 		throw BadDimensionException("Attempting to multiply matrix with "
-			+ std::to_string(_ncols) + " columns and 4 component vector");
+			+ std::to_string(n_cols) + " columns and 4 component vector");
 	}
-	//auto other_cols  = 1;
+
 	float vec_data[4] = {};
-	for (unsigned j = 0; j < _nrows; j++) {
+	for (unsigned j = 0; j < n_rows; j++) {
 		float sum = 0;
-		for (unsigned k = 0; k < _ncols; k++) {
-			sum += _data[j + k * _nrows] * (*multiplicand)(k);
+		for (unsigned k = 0; k < n_cols; k++) {
+			sum += mat(j, k) * vec(k); //TODO check
+			//sum += _data[j + k * n_rows] * vec(k);
 		}
 		vec_data[j] = sum;
 	}
-	_nrows = 0;
-	_ncols = 0;
-	//delete[] _data;
-	auto result = std::make_shared<Vec4>(Vec4(vec_data[0], vec_data[1], vec_data[2], vec_data[3]));
-	//Vec4::PrintVector(result);
-	return result;
+
+	return Vec4(vec_data[0], vec_data[1], vec_data[2], vec_data[3]);
 }
 
-Matrix::~Matrix() {
-	_nrows = 0;
-	_ncols = 0;
-	delete[] _data;
-}
-
-std::shared_ptr<Matrix> Matrix::Eye(unsigned rows) {
-	std::shared_ptr<Matrix> matrix(new Matrix(rows, rows));
+static Matrix Eye(unsigned rows) {
+	Matrix mat(rows, rows);
 	for (unsigned i = 0; i < rows; i++) {
-		(*matrix)(i, i) = 1;
+		mat(i, i) = 1;
 	}
-	//Matrix::PrintMatrix(matrix);
-	return matrix;
+	return mat;
 }
 
-std::shared_ptr<Matrix> Matrix::Scale(unsigned rows, float scaleX, float scaleY, float scaleZ) {
-	// create a scale matrix one dimension higher than supplied so 
-	// it can be multiplied with affine transformations
-	std::shared_ptr<Matrix> matrix(new Matrix(rows + 1, rows + 1));
-	(*matrix)(0, 0) = scaleX;
-	(*matrix)(1, 1) = scaleY;
-	(*matrix)(2, 2) = scaleZ;
-	(*matrix)(rows, rows) = 1.0f;
-	//Matrix::PrintMatrix(matrix);
-	return matrix;
+static Matrix Scale(float scaleX, float scaleY, float scaleZ) {
+	Matrix mat;
+	mat(0, 0) = scaleX;
+	mat(1, 1) = scaleY;
+	mat(2, 2) = scaleZ;
+	mat(3, 3) = 1.0f;
+	return mat;
 }
-std::shared_ptr<Matrix> Matrix::Rotation3D(float angle, sglAxis axis) {
+
+static Matrix Rotation3D(float angle, sglAxis axis) {
 	//C++ sin and cos need input in radians so convert angle first
 	//float rads = angle * PI / 180;
 	float cosangle = std::cos(angle);
 	float sinangle = std::sin(angle);
-	std::shared_ptr<Matrix> matrix(new Matrix(4, 4));
+	Matrix mat;
 	for (unsigned i = 0; i < 4; i++) {
-		(*matrix)(i, i) = (i == axis || i == 3) ? 1.0f : cosangle;
+		mat(i, i) = (i == axis || i == 3) ? 1.0f : cosangle;
 	}
 	switch (axis) {
 	case sglAxis::X_AXIS:
-		(*matrix)(2, 1) = sinangle;
-		(*matrix)(1, 2) = -sinangle;
+		mat(2, 1) = sinangle;
+		mat(1, 2) = -sinangle;
 		break;
 	case sglAxis::Y_AXIS:
-		(*matrix)(2, 0) = sinangle;
-		(*matrix)(0, 2) = -sinangle;
+		mat(2, 0) = sinangle;
+		mat(0, 2) = -sinangle;
 		break;
 	case sglAxis::Z_AXIS:
-		(*matrix)(1, 0) = sinangle;
-		(*matrix)(0, 1) = -sinangle;
+		mat(1, 0) = sinangle;
+		mat(0, 1) = -sinangle;
 		break;
 	default:
 		throw BadDimensionException("Trying to create rotation matrix alongside invalid axis "
 			+ std::to_string(axis));
 	}
-	//Matrix::PrintMatrix(matrix);
-	return matrix;
+	return mat;
 }
 
 
-std::shared_ptr<Matrix> Matrix::Translation3D(float x, float y, float z) {
-	std::shared_ptr<Matrix> matrix = Matrix::Eye(4);
-	(*matrix)(0, 3) = x;
-	(*matrix)(1, 3) = y;
-	(*matrix)(2, 3) = z;
-	(*matrix)(3, 3) = 1.0f;
-	//Matrix::PrintMatrix(matrix);
-	return matrix;
+static Matrix Translation3D(float x, float y, float z) {
+	Matrix mat = Matrix::Eye(4);
+	mat(0, 3) = x;
+	mat(1, 3) = y;
+	mat(2, 3) = z;
+	return mat;
 }
 
-std::shared_ptr<Matrix> Matrix::Orthographic3D(float left, float right, float top
+static Matrix Orthographic3D(float left, float right, float top
 	, float bottom, float near, float far) {
-	//std::cout << "Given parameters: " << " left: " << left << " right: " << right
-		//<< " bottom: " << bottom << " top: " << top << " near: " << near << " far: " << far << std::endl;
-	std::shared_ptr<Matrix> matrix(new Matrix(4, 4));
+
+	Matrix mat;
 	auto side_difference = right - left;
 	auto top_difference = top - bottom;
 	auto plane_difference = far - near;
-	(*matrix)(0, 0) = 2 / side_difference;
-	(*matrix)(1, 1) = 2 / top_difference;
-	(*matrix)(2, 2) = -2 / plane_difference;
-	(*matrix)(0, 3) = -(right + left) / side_difference;
-	(*matrix)(1, 3) = -(top + bottom) / top_difference;
-	(*matrix)(2, 3) = -(far + near) / plane_difference;
-	(*matrix)(3, 3) = 1;
-	//Matrix::PrintMatrix(matrix);
-	return matrix;
+	mat(0, 0) = 2 / side_difference;
+	mat(1, 1) = 2 / top_difference;
+	mat(2, 2) = -2 / plane_difference;
+	mat(0, 3) = -(right + left) / side_difference;
+	mat(1, 3) = -(top + bottom) / top_difference;
+	mat(2, 3) = -(far + near) / plane_difference;
+	mat(3, 3) = 1;
+
+	return mat;
 }
 
-std::shared_ptr<Matrix> Matrix::Viewport(int x, int y,
-	int width, int height) {
+static Matrix Viewport(int x, int y, int width, int height) {
 	auto width_half = width / 2;
 	auto height_half = height / 2;
-	std::shared_ptr<Matrix> matrix(new Matrix(4, 4));
-	(*matrix)(0, 0) = width_half;
-	(*matrix)(1, 1) = height_half;
-	(*matrix)(0, 2) = x + width_half;
-	(*matrix)(1, 2) = y + height_half;
-	(*matrix)(2, 2) = 1;
-	(*matrix)(3, 3) = 1;
-	//Matrix::PrintMatrix(matrix);
-	return matrix;
+	Matrix mat;
+	mat(0, 0) = width_half;
+	mat(1, 1) = height_half;
+	mat(0, 2) = x + width_half;
+	mat(1, 2) = y + height_half;
+	mat(2, 2) = 1;
+	mat(3, 3) = 1;
+
+	return mat;
 }
 
-std::shared_ptr<Matrix> Matrix::LookAt(std::shared_ptr<Vec4> eye, std::shared_ptr<Vec4> center,
-	std::shared_ptr<Vec4> up) {
-	std::shared_ptr<Matrix> matrix(new Matrix(4, 4));
-	auto zaxis = (*eye) - center;
-	Vec4::PrintVector(zaxis);
-	zaxis->normalize();
-	auto xaxis = Vec4::Cross3D(up, zaxis);
-	xaxis->normalize();
-	auto yaxis = Vec4::Cross3D(zaxis, xaxis);
+static Matrix LookAt(const Vec4& eye, const Vec4& center, const Vec4& up) {
+	Matrix mat;
+	Vec4 zaxis = eye - center;
+	zaxis.normalize();
+	Vec4 xaxis = Vec4::Cross3D(up, zaxis);
+	xaxis.normalize();
+	Vec4 yaxis = Vec4::Cross3D(zaxis, xaxis);
+
 	for (int i = 0; i < 3; i++) {
-		(*matrix)(0, i) = (*xaxis)(i);
-		(*matrix)(1, i) = (*yaxis)(i);
-		(*matrix)(2, i) = (*zaxis)(i);
-		(*matrix)(3, i) = 0;
+		mat(0, i) = xaxis(i);
+		mat(1, i) = yaxis(i);
+		mat(2, i) = zaxis(i);
+		mat(3, i) = 0;
 	}
-	(*matrix)(0, 3) = -eye->dot(xaxis);
-	(*matrix)(1, 3) = -eye->dot(yaxis);
-	(*matrix)(2, 3) = -eye->dot(zaxis);
-	(*matrix)(3, 3) = 1;
-	return matrix;
+	mat(0, 3) = -eye.dot(xaxis);
+	mat(1, 3) = -eye.dot(yaxis);
+	mat(2, 3) = -eye.dot(zaxis);
+	mat(3, 3) = 1;
+	return mat;
 }
-std::shared_ptr<Matrix> Matrix::RotateAroundCenter(float x, float y, float angle) {
+
+static Matrix RotateAroundCenter(float x, float y, float angle) {
 	//to perform rotation with a point given as center first translate to point to 
 	// be at the origin of coordinate system, rotate and then translate back
 	// however, because of matrix transformations being applied from right
 	// to left we actually need to do this in reverse order
-	auto matrix = Matrix::Translation3D(x, y, 0);
-	matrix->Matmul(Matrix::Rotation3D(angle, sglAxis::Z_AXIS));
-	matrix->Matmul(Matrix::Translation3D(-x, -y, 0));
-	return matrix;
-}
+	Matrix translate_back = Translation3D(x, y, 0);
+	Matrix rotate = Rotation3D(angle, sglAxis::Z_AXIS);
+	Matrix to_origin = Translation3D(-x, -y, 0);
+	Matrix mat = Matmul(translate_back, Matmul(rotate, to_origin));
 
+	return mat;
+}
