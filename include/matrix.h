@@ -198,6 +198,7 @@ public:
 	/// <param name="axis">Axis around which to rotate</param>
 	/// <returns></returns>
 	static std::shared_ptr<Matrix> Rotation3D(float angle, sglAxis axis);
+
 	/// <summary>
 	/// Create 4x4 translation matrix, with the translation amount
 	/// by the individual parameters.
@@ -207,6 +208,15 @@ public:
 	/// <param name="z"> Translation in z axis </param> 
 	/// <returns></returns>
 	static std::shared_ptr<Matrix> Translation3D(float x, float y, float z);
+
+	/// <summary>
+	/// Rotate around the given center of rotation given as a 2D point
+	/// </summary>
+	/// <param name="x"> X coordinate of the center</param>
+	/// <param name="y"> Y coordinate of the center </param>
+	/// <param name="angle"> Angle of the rotation given in radians</param>
+	/// <returns></returns>
+	static std::shared_ptr<Matrix> RotateAroundCenter(float x, float y, float angle);
 
 	/// <summary>
 	/// Create and orthographic projection matrix,

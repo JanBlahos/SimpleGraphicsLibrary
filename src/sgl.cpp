@@ -221,12 +221,64 @@ void sglVertex2f(float x, float y) {
 }
 
 void sglCircle(float x, float y, float z, float radius) {
-    
+    Context* cc = cm.current_context;
+    if (cc == nullptr) {
+        setErrCode(SGL_INVALID_OPERATION);
+        return;
+    }
+    if (radius <= 0) {
+        setErrCode(SGL_INVALID_VALUE);
+        return;
+    }
+    try {
+
+        cc->BresenhamCircle(x, y, z, radius);
+    }
+    catch (const SGLInvalidOperationException& ex) {
+        std::cerr << ex.what() << std::endl;
+        setErrCode(SGL_INVALID_OPERATION);
+    }
 }
 
-void sglEllipse(float x, float y, float z, float a, float b) {}
+void sglEllipse(float x, float y, float z, float a, float b) {
+    Context* cc = cm.current_context;
+    if (cc == nullptr) {
+        setErrCode(SGL_INVALID_OPERATION);
+        return;
+    }
+    if (a <= 0 || b <= 0) {
+        setErrCode(SGL_INVALID_VALUE);
+        return;
+    }
+    try {
 
-void sglArc(float x, float y, float z, float radius, float from, float to) {}
+        cc->DrawEllipse(x, y, z, a, b);
+    }
+    catch (const SGLInvalidOperationException& ex) {
+        std::cerr << ex.what() << std::endl;
+        setErrCode(SGL_INVALID_OPERATION);
+    }
+}
+
+void sglArc(float x, float y, float z, float radius, float from, float to) {
+    Context* cc = cm.current_context;
+    if (cc == nullptr) {
+        setErrCode(SGL_INVALID_OPERATION);
+        return;
+    }
+    if (radius <= 0) {
+        setErrCode(SGL_INVALID_VALUE);
+        return;
+    }
+    try {
+
+        cc->DrawArc(x, y, z, radius, from, to);
+    }
+    catch (const SGLInvalidOperationException& ex) {
+        std::cerr << ex.what() << std::endl;
+        setErrCode(SGL_INVALID_OPERATION);
+    }
+}
 
 //---------------------------------------------------------------------------
 // Transform functions
@@ -436,17 +488,9 @@ void sglRotate2D(float angle, float centerx, float centery) {
     }
     MatrixStack& ms = cc->matrix_stack;
     std::shared_ptr<Matrix> mat;
-    std::shared_ptr<Matrix> temp_mat;
     try {
         mat = ms.Top();
-        //to perform rotation with a point given as center first translate to point to 
-        // be at the origin of coordinate system, rotate and then translate back
-        // however, because of matrix transformations being applied from right
-        // to left we actually need to do this in reverse order
-        temp_mat = Matrix::Translation3D(centerx, centery, 0);
-        temp_mat->Matmul(Matrix::Rotation3D(angle, sglAxis::Z_AXIS));
-        temp_mat->Matmul(Matrix::Translation3D(-centerx, -centery, 0));
-        mat->Matmul(temp_mat);
+        mat->Matmul(Matrix::RotateAroundCenter(centerx, centery, angle));
         //Matrix::PrintMatrix(temp_mat);
     }
     catch (MatrixStackUnderflowException& ex1) {

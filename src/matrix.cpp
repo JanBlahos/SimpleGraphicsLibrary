@@ -350,4 +350,14 @@ std::shared_ptr<Matrix> Matrix::LookAt(std::shared_ptr<Vec4> eye, std::shared_pt
 	(*matrix)(3, 3) = 1;
 	return matrix;
 }
+std::shared_ptr<Matrix> Matrix::RotateAroundCenter(float x, float y, float angle) {
+	//to perform rotation with a point given as center first translate to point to 
+	// be at the origin of coordinate system, rotate and then translate back
+	// however, because of matrix transformations being applied from right
+	// to left we actually need to do this in reverse order
+	auto matrix = Matrix::Translation3D(x, y, 0);
+	matrix->Matmul(Matrix::Rotation3D(angle, sglAxis::Z_AXIS));
+	matrix->Matmul(Matrix::Translation3D(-x, -y, 0));
+	return matrix;
+}
 

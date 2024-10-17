@@ -6,6 +6,8 @@
 #include "sgl.h"
 #include "matrixStack.h"
 
+#define NUM_SEGMENTS 40
+
 typedef struct {
 	float r;
 	float g;
@@ -38,7 +40,37 @@ public:
 
 	void BufferVertex2f(float x, float y);
 
+	/// <summary>
+	/// Draw circle using the Bressenham algorithm
+	/// </summary>
+	/// <param name="x"> X coordinate of the center</param>
+	/// <param name="y"> Y coordinate of the center</param>
+	/// <param name="z"> Z coordinate of the center</param>
+	/// <param name="radius"> radius of the circle</param>
 	void BresenhamCircle(float x, float y, float z, float radius);
+
+	/// <summary>
+	/// Draw an arc by approximating it with NUM_SEGMENTS * |from - to| \ 2 * PI vertices.
+	/// </summary>
+	/// <param name="x"> X coordinate of the arc center</param>
+	/// <param name="y"> Y coordinate of the arc center </param>
+	/// <param name="z"> Z coordinate of the arc center </param>
+	/// <param name="radius"> The arc radius </param>
+	/// <param name="from"> Starting angle in radians of the arc measured CCW from 
+	/// positive X axis. </param>
+	/// <param name="to"> Ending angle in radians of the arc measured CCW from 
+	/// positive X axis.</param>
+	void DrawArc(float x, float y, float z, float radius, float from, float to);
+
+	/// <summary>
+	/// Draw an elipse by approximating it with NUM_SEGMENTS vertices
+	/// </summary>
+	/// <param name="x"> X coordinate of the center</param>
+	/// <param name="y"> Y coordinate of the center</param>
+	/// <param name="z"> Z coordinate of the center </param>
+	/// <param name="a"> Size of the a axis which is aligned with x coordinate axis.</param>
+	/// <param name="b"> Size of the b axis which is aligned with y coordinate axis. </param>
+	void DrawEllipse(float x, float y, float z, float a, float b);
 
 	void SetDrawingColor(float r, float g, float b);
 

@@ -109,16 +109,17 @@ void Context::BresenhamLine(int x1, int y1, int x2, int y2) {
 	//Pseudocode can be found on Wikipedia: https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
 
 	//std::cout << "Beggining line drawing" << std::endl;
-	if (use_incremental_error) {
-		int dx = std::abs(x2 - x1);
-		int dy = -std::abs(y2 - y1);
+	/*if (use_incremental_error) {
+		int dx = abs(x2 - x1);
+		int dy = abs(y2 - y1);
 
 		int sx = (x1 < x2) ? 1 : -1;
 		int sy = (y1 < y2) ? 1 : -1;
 
-		int err = dx + dy;
+		int err = dx - dy;
 
 		while (true) {
+			//std::cout << "Setting pixel" << x1 << " " << y1 <<  " goal is " << x2 << " " << y2 << std::endl;
 			SetPixel(x1, y1);
 
 			if (x1 == x2 && y1 == y2) break;
@@ -135,7 +136,7 @@ void Context::BresenhamLine(int x1, int y1, int x2, int y2) {
 			}
 		}
 		return;
-	}
+	}*/
 	if (std::abs(y2 - y1) < std::abs(x2 - x1)) {
 		if (x1 > x2) {
 			PlotLineX(x2, y2, x1, y1);
@@ -231,15 +232,17 @@ void Context::BresenhamCircle(float x, float y, float z, float radius) {
 	mat->Matmul(PVM_matrix);
 	v->PerspectiveDivide();
 	auto vec_in_screen = mat->Matmul(v);
+	//transformed_vec->PerspectiveDivide();
+	//auto vec_in_screen = Vp_matrix->Matmul(transformed_vec);
 	//square root of determinant of the upper left 2x2 part of the matrix
 	// times radius is the new radius
 	auto new_radius = radius * sqrt((*mat)(0, 0) * (*mat)(1, 1) - ((*mat)(1, 0) * (*mat)(0, 1)));
-	auto new_x = v->x;
-	auto new_y = v->y;
+	auto new_x = round(v->x);
+	auto new_y = round(v->y);
 	//TODO use the new_z for depth buffer
 	auto new_z = v->z;
 	// draw the first octant starting point
-	int current_x = round(new_x);
+	int current_x = new_x;
 	//if y == 0 is at the bottom of the screen otherwise it would be subtracted
 	int current_y = round(new_y + new_radius);
 	//initialize the Bressenham algorithm constants
@@ -280,5 +283,51 @@ void Context::BresenhamCircle(float x, float y, float z, float radius) {
 		dvex = dvex + 2;
 		current_x = current_x + 1;
 
+	}
+}
+
+void Context::DrawArc(float x, float y, float z, float radius, float from, float to) {
+	if (!is_drawing) {
+		throw SGLInvalidOperationException("Cannot call this function while not drawing.");
+	}
+	float total_angle = (abs(to - from)) / (2 * PI);
+	auto num_vertices = round(NUM_SEGMENTS * total_angle);
+	auto angle_step = total_angle / num_vertices;
+	auto start_vec = std::make_shared<Vec4>(x + radius, y, z, 1);
+	float cur_angle = from;
+	int vertices = 0;
+	while (vertices < num_vertices) {
+		auto rotation_matrix = Matrix::RotateAroundCenter(x, y, cur_angle);
+		auto temp_vec = rotation_matrix->Matmul(start_vec);
+		BufferVertex4f(temp_vec->x, temp_vec->y, temp_vec->z, temp_vec->w);
+		cur_angle += angle_step;
+		vertices++;
+	}
+
+}
+
+void Context::DrawEllipse(float x, float y, float z, float a, float b) {
+	if (!is_drawing) {
+		throw SGLInvalidOperationException("Cannot call this function while not drawing.");
+	}
+	auto angle_step = (2 * PI) / NUM_SEGMENTS;
+	auto start_vec = std::make_shared<Vec4>(x + a, y, z, 1);
+	float cur_angle = 0;
+	int vertices = 0;
+	//auto x_scaling = a / b;
+	//auto y_scaling = b / a;
+	while (vertices < NUM_SEGMENTS) {
+		auto rotation_matrix = Matrix::RotateAroundCenter(x, y, cur_angle);
+		auto temp_vec = rotation_matrix->Matmul(start_vec);
+		//save the unnormalized z and get rid of it for normalization
+		float unnormalized_z = temp_vec->z;
+		temp_vec->z = 0;
+		//to get position on a unit circle 
+		temp_vec->normalize();
+		// multiply the position on unit circle by the appropriate scaling
+		BufferVertex4f(x + (temp_vec->x * a), y + (temp_vec->y * b)
+			, unnormalized_z, temp_vec->w);
+		cur_angle += angle_step;
+		vertices ++;
 	}
 }
