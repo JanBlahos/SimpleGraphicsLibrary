@@ -151,13 +151,11 @@ void Context::BresenhamCircle(float x, float y, float z, float radius) {
 	auto new_z = vec_in_screen.z;
 	// draw the first octant starting point
 	int current_x = 0;
-	//if y == 0 is at the bottom of the screen otherwise it would be subtracted
 	int current_y = round(new_radius);
 	//initialize the Bressenham algorithm constants
 	int dvex = 3;
 	int dvey = 2 * new_radius - 2;
-	//starting decision constant if you put current_x and 
-	// current_y into the parametric circle equation
+	//initialize the decision constant
 	int p = 1 - new_radius;
 	while (current_x <= current_y) {
 		//draw the 8 symmetrical vertices
@@ -187,20 +185,15 @@ void Context::DrawArc(float x, float y, float z, float radius, float from, float
 	if (is_drawing) {
 		throw SGLInvalidOperationException("Cannot call this function while drawing.");
 	}
-	//begin drawing while keeping the last specified drawing mode
 	BeginDrawing(SGL_LINE_STRIP);
+
 	float total_angle = (abs(to - from)) / (2 * PI);
 	auto num_vertices = round(NUM_SEGMENTS * total_angle);
-	auto angle_step = total_angle / num_vertices;
-	auto start_vec = Vec4(x + radius, y, z, 1);
-	float cur_angle = from;
-	int vertices = 0;
-	while (vertices < num_vertices) {
-		auto rotation_matrix = Matrix::RotateAroundCenter(x, y, cur_angle);
-		auto temp_vec = Matrix::Matmul(rotation_matrix, start_vec);
-		BufferVertex4f(temp_vec.x, temp_vec.y, temp_vec.z, temp_vec.w);
-		cur_angle += angle_step;
-		vertices++;
+	for (int i = 0; i < num_vertices; i++) {
+		float theta = ((2 * PI * i) / NUM_SEGMENTS) + from;
+		float x_pos = x + radius * cos(theta);
+		float y_pos = y + radius * sin(theta);
+		BufferVertex4f(x_pos, y_pos, 0, 1);
 	}
 	EndDrawing();
 
@@ -211,28 +204,11 @@ void Context::DrawEllipse(float x, float y, float z, float a, float b) {
 		throw SGLInvalidOperationException("Cannot call this function while drawing.");
 	}
 	BeginDrawing(SGL_LINE_LOOP);
-	auto angle_step = (2 * PI) / NUM_SEGMENTS;
-	auto start_vec = Vec4(x + a, y, z, 1);
-	float cur_angle = 0;
-	int vertices = 0;
-	//TODO. Draw the center point if SGL_POINT fill mode was specified
-	//auto x_scaling = a / b;
-	//auto y_scaling = b / a;
-	while (vertices < NUM_SEGMENTS) {
-		auto rotation_matrix = Matrix::RotateAroundCenter(x, y, cur_angle);
-		auto temp_vec = Matrix::Matmul(rotation_matrix, start_vec);
-		//save the unnormalized z and get rid of it for normalization
-		// will be later used for depth buffer
-		float unnormalized_z = temp_vec.z;
-		temp_vec.z = 0;
-		//to get position on a unit circle 
-		temp_vec.normalize();
-		// multiply the position on unit circle by the appropriate scaling
-		BufferVertex4f(x + (temp_vec.x * a), y + (temp_vec.y * b)
-			, unnormalized_z, temp_vec.w);
-		//std::cout << "Made it to ellipse" << std::endl;
-		cur_angle += angle_step;
-		vertices++;
+	for (int i = 0; i < NUM_SEGMENTS; i++) {
+		float theta = (2 * PI * i) / NUM_SEGMENTS;
+		float x_pos = x + a * cos(theta);
+		float y_pos = y + b * sin(theta);
+		BufferVertex4f(x_pos, y_pos, 0, 1);
 	}
 	EndDrawing();
 }

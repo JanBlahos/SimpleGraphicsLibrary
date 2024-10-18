@@ -373,9 +373,14 @@ Matrix Matrix::RotateAroundCenter(float x, float y, float angle) {
 	// however, because of matrix transformations being applied from right
 	// to left we actually need to do this in reverse order
 	Matrix translate_back = Translation3D(x, y, 0);
+	//Matrix::PrintMatrix(translate_back);
 	Matrix rotate = Rotation3D(angle, sglAxis::Z_AXIS);
+	//Matrix::PrintMatrix(rotate);
 	Matrix to_origin = Translation3D(-x, -y, 0);
+	//Matrix::PrintMatrix(translate_back);
+	//Matrix::PrintMatrix(Matmul(rotate, to_origin));
 	Matrix mat = Matmul(translate_back, Matmul(rotate, to_origin));
+	//Matrix::PrintMatrix(mat);
 
 	return mat;
 }
