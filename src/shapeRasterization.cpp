@@ -185,24 +185,26 @@ void Context::DrawArc(float x, float y, float z, float radius, float from, float
 	if (is_drawing) {
 		throw SGLInvalidOperationException("Cannot call this function while drawing.");
 	}
+
 	BeginDrawing(SGL_LINE_STRIP);
 
 	float total_angle = (abs(to - from)) / (2 * PI);
-	auto num_vertices = round(NUM_SEGMENTS * total_angle);
+	int num_vertices = round(NUM_SEGMENTS * total_angle);
+
 	for (int i = 0; i < num_vertices; i++) {
-		float theta = ((2 * PI * i) / NUM_SEGMENTS) + from;
+		float theta = from + (to - from) * static_cast<float>(i) / (num_vertices - 1);
 		float x_pos = x + radius * cos(theta);
 		float y_pos = y + radius * sin(theta);
 		BufferVertex4f(x_pos, y_pos, 0, 1);
 	}
 	EndDrawing();
-
 }
 
 void Context::DrawEllipse(float x, float y, float z, float a, float b) {
 	if (is_drawing) {
 		throw SGLInvalidOperationException("Cannot call this function while drawing.");
 	}
+
 	BeginDrawing(SGL_LINE_LOOP);
 	for (int i = 0; i < NUM_SEGMENTS; i++) {
 		float theta = (2 * PI * i) / NUM_SEGMENTS;
