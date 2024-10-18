@@ -68,13 +68,11 @@ void MatrixStack::Duplicate() {
 
 
 const Matrix& MatrixStack::GetViewport() {
-	auto& dims = viewPort_.GetDimensions();
-	auto& data = viewPort_.GetData();
-	return Matrix(dims.first, dims.second, data);
+	return viewPort_;
 }
 
 void MatrixStack::SetViewport(const Matrix& viewPort) {
-	auto& dims = viewPort.GetDimensions();
+	const std::pair<unsigned int, unsigned int>& dims = viewPort.GetDimensions();
 	auto& data = viewPort.GetData();
 	viewPort_ = Matrix(dims.first, dims.second, data);
 }

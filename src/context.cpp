@@ -16,6 +16,7 @@ Context::Context(unsigned width, unsigned height) {
 	use_incremental_error = true;
 	Vp_matrix = Matrix::Eye(4);
 	PVM_matrix = Matrix::Eye(4);
+	drawing_mode = SGL_POINTS;
 };
 
 float* Context::GetColorBufferPtr(void) {

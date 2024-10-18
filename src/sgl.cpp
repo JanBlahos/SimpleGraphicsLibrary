@@ -236,6 +236,7 @@ void sglCircle(float x, float y, float z, float radius) {
         cc->BresenhamCircle(x, y, z, radius);
     }
     catch (const SGLInvalidOperationException& ex) {
+        std::cerr << "In circle" << std::endl;
         std::cerr << ex.what() << std::endl;
         setErrCode(SGL_INVALID_OPERATION);
     }
@@ -256,6 +257,7 @@ void sglEllipse(float x, float y, float z, float a, float b) {
         cc->DrawEllipse(x, y, z, a, b);
     }
     catch (const SGLInvalidOperationException& ex) {
+        std::cerr << "In ellipse" << std::endl;
         std::cerr << ex.what() << std::endl;
         setErrCode(SGL_INVALID_OPERATION);
     }
@@ -276,6 +278,7 @@ void sglArc(float x, float y, float z, float radius, float from, float to) {
         cc->DrawArc(x, y, z, radius, from, to);
     }
     catch (const SGLInvalidOperationException& ex) {
+        std::cerr << "In arc" << std::endl;
         std::cerr << ex.what() << std::endl;
         setErrCode(SGL_INVALID_OPERATION);
     }
@@ -389,7 +392,7 @@ void sglMultMatrix(const float *matrix) {
     MatrixStack& ms = cc->matrix_stack;
 
     try {
-        const Matrix& mat = ms.Top();
+        //const Matrix& mat = ms.Top();
         //TODO implement multiplication by (const float* matrix) to avoid copying
         Matrix new_mat = Matrix::Matmul(ms.Top(), Matrix(4, 4, matrix));
         ms.Pop();
@@ -423,7 +426,7 @@ void sglTranslate(float x, float y, float z) {
     MatrixStack& ms = cc->matrix_stack;
 
     try {
-        const Matrix& mat = ms.Top();
+        //const Matrix& mat = ms.Top();
         Matrix new_mat = Matrix::Matmul(ms.Top(), Matrix::Translation3D(x, y, z));
         ms.Pop();
         ms.Push(new_mat);
@@ -455,7 +458,7 @@ void sglScale(float scalex, float scaley, float scalez) {
     MatrixStack& ms = cc->matrix_stack;
 
     try {
-        const Matrix& mat = ms.Top();
+        //const Matrix& mat = ms.Top();
         Matrix new_mat = Matrix::Matmul(ms.Top(), Matrix::Scale(scalex, scaley, scalez));
         ms.Pop();
         ms.Push(new_mat);
@@ -486,7 +489,7 @@ void sglRotate2D(float angle, float centerx, float centery) {
     MatrixStack& ms = cc->matrix_stack;
 
     try {
-        const Matrix& mat = ms.Top();
+        //const Matrix& mat = ms.Top();
         Matrix new_mat = Matrix::Matmul(ms.Top(), Matrix::RotateAroundCenter(centerx, centery, angle));
         ms.Pop();
         ms.Push(new_mat);
@@ -518,7 +521,7 @@ void sglRotateY(float angle) {
     MatrixStack& ms = cc->matrix_stack;
 
     try {
-        const Matrix& mat = ms.Top();
+        //const Matrix& mat = ms.Top();
         Matrix new_mat = Matrix::Matmul(ms.Top(), Matrix::Rotation3D(angle, sglAxis::Y_AXIS));
         ms.Pop();
         ms.Push(new_mat);
@@ -550,7 +553,7 @@ void sglOrtho(float left, float right, float bottom, float top, float near, floa
     MatrixStack& ms = cc->matrix_stack;
 
     try {
-        const Matrix& mat = ms.Top();
+        //const Matrix& mat = ms.Top();
         Matrix new_mat = Matrix::Matmul(ms.Top(), Matrix::Orthographic3D(left, right, top, bottom, near, far));
         ms.Pop();
         ms.Push(new_mat);
@@ -655,26 +658,7 @@ void sglSphere(const float x,
                const float y,
                const float z,
                const float radius)
-{
-    Context* cc = cm.current_context;
-    if (cc == nullptr) {
-        setErrCode(SGL_INVALID_OPERATION);
-        return;
-    }
-    //MatrixStack& ms = cc->matrix_stack;
-    //scale and transform the coordinates and the radius first
-    try {
-        cc->BresenhamCircle(x, y, z, radius);
-    }
-    catch (MatrixStackUnderflowException& ex1) {
-        std::cerr << ex1.what() << std::endl;
-        setErrCode(SGL_STACK_UNDERFLOW);
-    }
-    catch (SGLInvalidOperationException& ex2) {
-        std::cerr << ex2.what() << std::endl;
-        setErrCode(SGL_INVALID_OPERATION);
-    }
-}
+{}
 
 void sglMaterial(const float r,
                  const float g,

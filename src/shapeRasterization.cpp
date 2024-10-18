@@ -5,6 +5,7 @@
 
 #include "context.h"
 #include "exceptions.h"
+#include <iostream>
 
 void Context::BresenhamLine(int x1, int y1, int x2, int y2) {
 	if (!is_drawing) {
@@ -128,36 +129,39 @@ void Context::PlotLineY(int x1, int y1, int x2, int y2) {
 };
 
 void Context::BresenhamCircle(float x, float y, float z, float radius) {
-	//Note: this exception was changed as specified in sgl.h
 	if (is_drawing) {
 		throw SGLInvalidOperationException("Cannot call this function while drawing.");
 	}
 
+	BeginDrawing(drawing_mode);
 	Vec4 v(x, y, z, 1);
+	//Vec4::PrintVector(v);
 	Vec4 transformed_vec = Matrix::Matmul(PVM_matrix, v);
 	transformed_vec.PerspectiveDivide();
-	Vec4 vec_in_screen = Matrix::Matmul(Vp_matrix, transformed_vec);
 	Matrix mat = Matrix::Matmul(Vp_matrix, PVM_matrix);
+	Vec4 vec_in_screen = Matrix::Matmul(Vp_matrix, transformed_vec);
+	//TODO. Draw the center point if SGL_POINT fill mode was specified
 
 	//square root of determinant of the upper left 2x2 part of the matrix
 	// times radius is the new radius
 	auto new_radius = radius * sqrt(mat(0, 0) * mat(1, 1) - (mat(1, 0) * mat(0, 1)));
-	auto new_x = round(v.x);
-	auto new_y = round(v.y);
+	auto new_x = round(vec_in_screen.x);
+	auto new_y = round(vec_in_screen.y);
 	//TODO use the new_z for depth buffer
-	auto new_z = v.z;
+	auto new_z = vec_in_screen.z;
 	// draw the first octant starting point
-	int current_x = new_x;
+	int current_x = 0;
 	//if y == 0 is at the bottom of the screen otherwise it would be subtracted
-	int current_y = round(new_y + new_radius);
+	int current_y = round(new_radius);
 	//initialize the Bressenham algorithm constants
-	int dvex = 3 + 2 * new_x;
-	int dvey = 2 * current_y - 2;
+	int dvex = 3; //+ 2 * new_x;
+	int dvey = 2 * new_radius - 2;
 	//starting decision constant if you put current_x and 
 	// current_y into the parametric circle equation
-	int p = (current_x * current_x) + 2 * current_x + 1
+	int p = 1 - new_radius;
+	/*int p = (current_x * current_x) + 2 * current_x + 1
 		+ (new_y * new_y) + 2 * (new_y * new_radius)
-		- new_y - new_radius;
+		- new_y - new_radius;*/
 	// int p =  (current_x * current_x) + 2 * current_x + 1 
 	// +(new_y * new_y) - 2 * (new_y * new_radius)
 	// - new_y + new_radius; if y == 0 is at the top of the screen
@@ -165,20 +169,29 @@ void Context::BresenhamCircle(float x, float y, float z, float radius) {
 		//draw the 8 symmetrical vertices
 		//for flipping current x y based on
 		// the starting axes
-		int x_distance = (current_x - new_x);
+		/*int x_distance = (current_x - new_x);
 		int y_distance = (current_y - new_y);
 		//for drawing the vertices that are 
 		// center symmetrical with current (x, y)
 		int switched_x = (new_x + y_distance);
 		int switched_y = (new_y + x_distance);
-		SetPixel(current_x, current_y);
-		SetPixel(new_x - x_distance, current_y);
-		SetPixel(current_x, new_y - y_distance);
-		SetPixel(new_x - x_distance, new_y - y_distance);
-		SetPixel(switched_x, switched_y);
-		SetPixel(new_x - y_distance, switched_y);
-		SetPixel(switched_x, new_y - x_distance);
-		SetPixel(new_x - y_distance, new_y - x_distance);
+		DrawVertex(current_x, current_y);
+		DrawVertex(new_x - x_distance, current_y);
+		DrawVertex(current_x, new_y - y_distance);
+		DrawVertex(new_x - x_distance, new_y - y_distance);
+		DrawVertex(switched_x, switched_y);
+		DrawVertex(new_x - y_distance, switched_y);
+		DrawVertex(switched_x, new_y - x_distance);
+		DrawVertex(new_x - y_distance, new_y - x_distance);*/
+		DrawVertex(new_x + current_x, new_y + current_y);
+		DrawVertex(new_x - current_x, new_y + current_y);
+		DrawVertex(new_x + current_x, new_y - current_y);
+		DrawVertex(new_x - current_x, new_y - current_y);
+		DrawVertex(new_x + current_y, new_y + current_x);
+		DrawVertex(new_x - current_y, new_y + current_x);
+		DrawVertex(new_x + current_y, new_y - current_x);
+		DrawVertex(new_x - current_y, new_y - current_x);
+
 		if (p > 0) {
 			p = p - dvey;
 			dvey = dvey - 2;
@@ -189,12 +202,15 @@ void Context::BresenhamCircle(float x, float y, float z, float radius) {
 		current_x = current_x + 1;
 
 	}
+	EndDrawing();
 }
 
 void Context::DrawArc(float x, float y, float z, float radius, float from, float to) {
-	if (!is_drawing) {
-		throw SGLInvalidOperationException("Cannot call this function while not drawing.");
+	if (is_drawing) {
+		throw SGLInvalidOperationException("Cannot call this function while drawing.");
 	}
+	//begin drawing while keeping the last specified drawing mode
+	BeginDrawing(drawing_mode);
 	float total_angle = (abs(to - from)) / (2 * PI);
 	auto num_vertices = round(NUM_SEGMENTS * total_angle);
 	auto angle_step = total_angle / num_vertices;
@@ -208,23 +224,27 @@ void Context::DrawArc(float x, float y, float z, float radius, float from, float
 		cur_angle += angle_step;
 		vertices++;
 	}
+	EndDrawing();
 
 }
 
 void Context::DrawEllipse(float x, float y, float z, float a, float b) {
-	if (!is_drawing) {
-		throw SGLInvalidOperationException("Cannot call this function while not drawing.");
+	if (is_drawing) {
+		throw SGLInvalidOperationException("Cannot call this function while drawing.");
 	}
+	BeginDrawing(drawing_mode);
 	auto angle_step = (2 * PI) / NUM_SEGMENTS;
 	auto start_vec = Vec4(x + a, y, z, 1);
 	float cur_angle = 0;
 	int vertices = 0;
+	//TODO. Draw the center point if SGL_POINT fill mode was specified
 	//auto x_scaling = a / b;
 	//auto y_scaling = b / a;
 	while (vertices < NUM_SEGMENTS) {
 		auto rotation_matrix = Matrix::RotateAroundCenter(x, y, cur_angle);
 		auto temp_vec = Matrix::Matmul(rotation_matrix, start_vec);
 		//save the unnormalized z and get rid of it for normalization
+		// will be later used for depth buffer
 		float unnormalized_z = temp_vec.z;
 		temp_vec.z = 0;
 		//to get position on a unit circle 
@@ -232,7 +252,9 @@ void Context::DrawEllipse(float x, float y, float z, float a, float b) {
 		// multiply the position on unit circle by the appropriate scaling
 		BufferVertex4f(x + (temp_vec.x * a), y + (temp_vec.y * b)
 			, unnormalized_z, temp_vec.w);
+		//std::cout << "Made it to ellipse" << std::endl;
 		cur_angle += angle_step;
 		vertices++;
 	}
+	EndDrawing();
 }

@@ -44,7 +44,6 @@ void Context::EndDrawing() {
 	if (!is_drawing) {
 		throw SGLInvalidOperationException("Cannot call this function while not drawing.");
 	}
-	is_drawing = false;
 
 	// TODO
 	// - close line loop, last triangle, etc. depending on mode
@@ -52,10 +51,54 @@ void Context::EndDrawing() {
 	if (drawing_mode == SGL_LINE_LOOP) {
 		BresenhamLine(first_point.x, first_point.y, vertex_buffer.back().x, vertex_buffer.back().y);
 	}
+	is_drawing = false;
 
 	//clear the vertex buffer
 	vertex_buffer.clear();
 };
+
+void Context::DrawVertex(int x1, int y1) {
+	switch (drawing_mode) {
+
+	case SGL_POINTS:
+		DrawPoint(x1, y1);
+		break;
+
+	case SGL_LINES:
+		if (!vertex_buffer.empty()) {
+			BresenhamLine(vertex_buffer.front().x, vertex_buffer.front().y, x1, y1);
+			vertex_buffer.clear();
+		}
+		else {
+			vertex_buffer.push_back(Point2D{ x1, y1 });
+		}
+		break;
+
+	case SGL_LINE_STRIP: //same as lines but doesn't clear buffer, just pops front
+		if (!vertex_buffer.empty()) {
+			BresenhamLine(vertex_buffer.front().x, vertex_buffer.front().y, x1, y1);
+			vertex_buffer.pop_front();
+		}
+		//always push new vertex
+		vertex_buffer.push_back(Point2D{ x1, y1 });
+		break;
+
+	case SGL_LINE_LOOP: //same as strip but needs to connect first and last when End() is called
+		if (first_point.x == -1) {
+			first_point.x = x1;
+			first_point.y = y1;
+		}
+		if (!vertex_buffer.empty()) {
+			BresenhamLine(vertex_buffer.back().x, vertex_buffer.back().y, x1, y1);
+			vertex_buffer.pop_front();
+		}
+		vertex_buffer.push_back(Point2D{ x1, y1 });
+		break;
+		//TODO triangles, polygon, etc. (from sglEElementType)
+	default:
+		break;
+	}
+}
 
 void Context::BufferVertex4f(float x, float y, float z, float w) {
 	//tranform to screen
@@ -71,46 +114,9 @@ void Context::BufferVertex4f(float x, float y, float z, float w) {
 	//TODO perhaps round elsewhere?
 	tx = std::round(_tx);
 	ty = std::round(_ty);
+	DrawVertex(tx, ty);
 
-	switch (drawing_mode) {
-
-	case SGL_POINTS:
-		DrawPoint(tx, ty);
-		break;
-
-	case SGL_LINES:
-		if (!vertex_buffer.empty()) {
-			BresenhamLine(vertex_buffer.front().x, vertex_buffer.front().y, tx, ty);
-			vertex_buffer.clear();
-		} else {
-			vertex_buffer.push_back(Point2D{ tx, ty });
-		}
-		break;
-
-	case SGL_LINE_STRIP: //same as lines but doesn't clear buffer, just pops front
-		if (!vertex_buffer.empty()) {
-			BresenhamLine(vertex_buffer.front().x, vertex_buffer.front().y, tx, ty);
-			vertex_buffer.pop_front();
-		}
-		//always push new vertex
-		vertex_buffer.push_back(Point2D{ tx, ty });
-		break;
-
-	case SGL_LINE_LOOP: //same as strip but needs to connect first and last when End() is called
-		if (first_point.x == -1) {
-			first_point.x = tx;
-			first_point.y = ty;
-		}
-		if (!vertex_buffer.empty()) {
-			BresenhamLine(vertex_buffer.back().x, vertex_buffer.back().y, tx, ty);
-			vertex_buffer.pop_front();
-		}
-		vertex_buffer.push_back(Point2D{ tx, ty });
-		break;
-		//TODO triangles, polygon, etc. (from sglEElementType)
-	default:
-		break;
-	}
+	
 };
 
 void Context::BufferVertex3f(float x, float y, float z) {

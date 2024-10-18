@@ -216,11 +216,9 @@ Matrix Matrix::Matmul(const Matrix& left, const Matrix& right) {
 		for (unsigned j = 0; j < left_rows; ++j) {
 			float sum = 0;
 			for (unsigned k = 0; k < left_cols; ++k) {
-				sum += left(j, k) * right(k, i); //TODO check
-				//sum += left.GetData()[j + k * left_rows] * right(k, i);
+				sum += left(j, k) * right(k, i);
 			}
-			result(j, i) = sum; //TODO check
-			//_data[j + i * _nrows] = sum;
+			result(j, i) = sum;
 		}
 	}
 
@@ -232,6 +230,10 @@ Vec4 Matrix::Matmul(Matrix& mat, const Vec4& vec) {
 	// in which case the appropriate components of the output
 	// will be zeroed.
 
+	/*std::cout << "Multiplying matrix" << std::endl;
+	Matrix::PrintMatrix(mat);
+	std::cout << "with vector " << std::endl;
+	Vec4::PrintVector(vec);*/
 	auto mat_dims = mat.GetDimensions();
 	unsigned n_rows, n_cols;
 	n_rows = mat_dims.first;
@@ -247,12 +249,14 @@ Vec4 Matrix::Matmul(Matrix& mat, const Vec4& vec) {
 		float sum = 0;
 		for (unsigned k = 0; k < n_cols; k++) {
 			sum += mat(j, k) * vec(k); //TODO check
+			//std::cout << "Adding " << mat(j, k) * vec(k) << " to vector component " << j << std::endl;
 			//sum += _data[j + k * n_rows] * vec(k);
 		}
 		vec_data[j] = sum;
 	}
-
-	return Vec4(vec_data[0], vec_data[1], vec_data[2], vec_data[3]);
+	auto ret = Vec4(vec_data[0], vec_data[1], vec_data[2], vec_data[3]);
+	//Vec4::PrintVector(ret);
+	return ret;
 }
 
 Matrix Matrix::Eye(unsigned rows) {
@@ -334,8 +338,8 @@ Matrix Matrix::Viewport(int x, int y, int width, int height) {
 	Matrix mat;
 	mat(0, 0) = width_half;
 	mat(1, 1) = height_half;
-	mat(0, 2) = x + width_half;
-	mat(1, 2) = y + height_half;
+	mat(0, 3) = x + width_half;
+	mat(1, 3) = y + height_half;
 	mat(2, 2) = 1;
 	mat(3, 3) = 1;
 

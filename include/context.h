@@ -109,6 +109,13 @@ private:
 
 	void DrawPoint(int x1, int y1);
 
+	/// <summary>
+	/// Used to handle the drawing switch based on the current mode
+	/// </summary>
+	/// <param name="x1"> Vertex x coordinate</param>
+	/// <param name="y1"> Vertex y coordinate</param>
+	void DrawVertex(int x1, int y1);
+
 	void BresenhamLine(int x1, int y1, int x2, int y2);
 
 	void PlotLineX(int x1, int y1, int x2, int y2);
