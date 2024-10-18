@@ -133,7 +133,7 @@ void Context::BresenhamCircle(float x, float y, float z, float radius) {
 		throw SGLInvalidOperationException("Cannot call this function while drawing.");
 	}
 
-	BeginDrawing(drawing_mode);
+	BeginDrawing(SGL_POINTS);
 	Vec4 v(x, y, z, 1);
 	//Vec4::PrintVector(v);
 	Vec4 transformed_vec = Matrix::Matmul(PVM_matrix, v);
@@ -154,43 +154,21 @@ void Context::BresenhamCircle(float x, float y, float z, float radius) {
 	//if y == 0 is at the bottom of the screen otherwise it would be subtracted
 	int current_y = round(new_radius);
 	//initialize the Bressenham algorithm constants
-	int dvex = 3; //+ 2 * new_x;
+	int dvex = 3;
 	int dvey = 2 * new_radius - 2;
 	//starting decision constant if you put current_x and 
 	// current_y into the parametric circle equation
 	int p = 1 - new_radius;
-	/*int p = (current_x * current_x) + 2 * current_x + 1
-		+ (new_y * new_y) + 2 * (new_y * new_radius)
-		- new_y - new_radius;*/
-	// int p =  (current_x * current_x) + 2 * current_x + 1 
-	// +(new_y * new_y) - 2 * (new_y * new_radius)
-	// - new_y + new_radius; if y == 0 is at the top of the screen
 	while (current_x <= current_y) {
 		//draw the 8 symmetrical vertices
-		//for flipping current x y based on
-		// the starting axes
-		/*int x_distance = (current_x - new_x);
-		int y_distance = (current_y - new_y);
-		//for drawing the vertices that are 
-		// center symmetrical with current (x, y)
-		int switched_x = (new_x + y_distance);
-		int switched_y = (new_y + x_distance);
-		DrawVertex(current_x, current_y);
-		DrawVertex(new_x - x_distance, current_y);
-		DrawVertex(current_x, new_y - y_distance);
-		DrawVertex(new_x - x_distance, new_y - y_distance);
-		DrawVertex(switched_x, switched_y);
-		DrawVertex(new_x - y_distance, switched_y);
-		DrawVertex(switched_x, new_y - x_distance);
-		DrawVertex(new_x - y_distance, new_y - x_distance);*/
-		DrawVertex(new_x + current_x, new_y + current_y);
-		DrawVertex(new_x - current_x, new_y + current_y);
-		DrawVertex(new_x + current_x, new_y - current_y);
-		DrawVertex(new_x - current_x, new_y - current_y);
-		DrawVertex(new_x + current_y, new_y + current_x);
-		DrawVertex(new_x - current_y, new_y + current_x);
-		DrawVertex(new_x + current_y, new_y - current_x);
-		DrawVertex(new_x - current_y, new_y - current_x);
+		SetPixel(new_x + current_x, new_y + current_y);
+		SetPixel(new_x - current_x, new_y + current_y);
+		SetPixel(new_x + current_x, new_y - current_y);
+		SetPixel(new_x - current_x, new_y - current_y);
+		SetPixel(new_x + current_y, new_y + current_x);
+		SetPixel(new_x - current_y, new_y + current_x);
+		SetPixel(new_x + current_y, new_y - current_x);
+		SetPixel(new_x - current_y, new_y - current_x);
 
 		if (p > 0) {
 			p = p - dvey;
@@ -210,7 +188,7 @@ void Context::DrawArc(float x, float y, float z, float radius, float from, float
 		throw SGLInvalidOperationException("Cannot call this function while drawing.");
 	}
 	//begin drawing while keeping the last specified drawing mode
-	BeginDrawing(drawing_mode);
+	BeginDrawing(SGL_LINE_STRIP);
 	float total_angle = (abs(to - from)) / (2 * PI);
 	auto num_vertices = round(NUM_SEGMENTS * total_angle);
 	auto angle_step = total_angle / num_vertices;
@@ -232,7 +210,7 @@ void Context::DrawEllipse(float x, float y, float z, float a, float b) {
 	if (is_drawing) {
 		throw SGLInvalidOperationException("Cannot call this function while drawing.");
 	}
-	BeginDrawing(drawing_mode);
+	BeginDrawing(SGL_LINE_LOOP);
 	auto angle_step = (2 * PI) / NUM_SEGMENTS;
 	auto start_vec = Vec4(x + a, y, z, 1);
 	float cur_angle = 0;

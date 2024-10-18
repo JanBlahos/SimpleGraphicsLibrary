@@ -25,6 +25,13 @@ public:
 	void SetMode(sglEMatrixMode mode);
 
 	/// <summary>
+	/// Return the currently active mode
+	/// (whether the ModelView or Projection stack is active)
+	/// </summary>
+	/// <returns></returns>
+	sglEMatrixMode GetMode();
+
+	/// <summary>
 	/// Return the top matrix from the currently active stack
 	/// </summary>
 	/// <returns></returns>

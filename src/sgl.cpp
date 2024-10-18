@@ -428,8 +428,10 @@ void sglTranslate(float x, float y, float z) {
     try {
         //const Matrix& mat = ms.Top();
         Matrix new_mat = Matrix::Matmul(ms.Top(), Matrix::Translation3D(x, y, z));
+        //Matrix::PrintMatrix(ms.Top());
         ms.Pop();
         ms.Push(new_mat);
+        //Matrix::PrintMatrix(ms.Top());
     }
     catch (MatrixStackUnderflowException& ex1) {
         std::cerr << ex1.what() << std::endl;
@@ -460,8 +462,10 @@ void sglScale(float scalex, float scaley, float scalez) {
     try {
         //const Matrix& mat = ms.Top();
         Matrix new_mat = Matrix::Matmul(ms.Top(), Matrix::Scale(scalex, scaley, scalez));
+        //Matrix::PrintMatrix(ms.Top());
         ms.Pop();
         ms.Push(new_mat);
+        //Matrix::PrintMatrix(ms.Top());
     }
     catch (MatrixStackUnderflowException& ex1) {
         std::cerr << ex1.what() << std::endl;

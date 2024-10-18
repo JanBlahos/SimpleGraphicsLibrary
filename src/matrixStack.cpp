@@ -14,6 +14,10 @@ void MatrixStack::SetMode(sglEMatrixMode mode) {
 	current_stack_ = mode;
 }
 
+sglEMatrixMode MatrixStack::GetMode() {
+	return current_stack_;
+}
+
 const Matrix& MatrixStack::Top() {
 	if (current_stack_ == SGL_MODELVIEW) {
 		if (MV_stack_.empty()) {

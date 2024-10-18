@@ -23,14 +23,13 @@ void Context::BeginDrawing(sglEElementType mode) {
 
 	//get viewport and PVM matrices
 
-	//TODO remember which mode was selected and restore in
-	//case the user sets a mode and then comes back later
-
+	auto current_mode = matrix_stack.GetMode();
 	matrix_stack.SetMode(SGL_MODELVIEW);
 	const Matrix& VM = matrix_stack.Top();
 
 	matrix_stack.SetMode(SGL_PROJECTION);
 	const Matrix& P = matrix_stack.Top();
+	matrix_stack.SetMode(current_mode);
 
 	//Matrix::PrintMatrix(VM);
 	//Matrix::PrintMatrix(P);
@@ -103,9 +102,13 @@ void Context::DrawVertex(int x1, int y1) {
 void Context::BufferVertex4f(float x, float y, float z, float w) {
 	//tranform to screen
 	Vec4 v(x, y, z, w);
+	//Vec4::PrintVector(v);
 	Vec4 transformed_vec = Matrix::Matmul(PVM_matrix, v);
 	transformed_vec.PerspectiveDivide();
+	//Matrix::PrintMatrix(PVM_matrix);
+	//Matrix::PrintMatrix(Vp_matrix);
 	Vec4 vec_in_screen = Matrix::Matmul(Vp_matrix, transformed_vec);
+	//Vec4::PrintVector(vec_in_screen);
 
 	float _tx, _ty;
 	_tx = vec_in_screen.x;
