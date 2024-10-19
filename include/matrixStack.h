@@ -50,6 +50,18 @@ public:
 	const Matrix& GetViewport();
 
 	/// <summary>
+	/// Return modelview matrix
+	/// </summary>
+	/// <returns></returns>
+	const Matrix& GetViewModelMatrix();
+
+	/// <summary>
+	/// Return projection matrix
+	/// </summary>
+	/// <returns></returns>
+	const Matrix& GetProjectionMatrix();
+
+	/// <summary>
 	/// Remove the top matrix from the currently active stack
 	/// </summary>
 	void Pop();

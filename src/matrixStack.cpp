@@ -75,6 +75,14 @@ const Matrix& MatrixStack::GetViewport() {
 	return viewPort_;
 }
 
+const Matrix& MatrixStack::GetViewModelMatrix() {
+	return MV_stack_.top();
+}
+
+const Matrix& MatrixStack::GetProjectionMatrix() {
+	return P_stack_.top();
+}
+
 void MatrixStack::SetViewport(const Matrix& viewPort) {
 	const std::pair<unsigned int, unsigned int>& dims = viewPort.GetDimensions();
 	auto& data = viewPort.GetData();

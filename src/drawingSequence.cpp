@@ -115,11 +115,13 @@ void Context::BufferVertex4f(float x, float y, float z, float w) {
 	_ty = vec_in_screen.y;
 	int tx, ty;
 	//TODO perhaps round elsewhere?
-	tx = std::round(_tx);
-	ty = std::round(_ty);
-	DrawVertex(tx, ty);
 
-	
+	/*tx = std::round(_tx);
+	ty = std::round(_ty);*/
+
+	tx = std::floor(_tx);
+	ty = std::floor(_ty);
+	DrawVertex(tx, ty);
 };
 
 void Context::BufferVertex3f(float x, float y, float z) {

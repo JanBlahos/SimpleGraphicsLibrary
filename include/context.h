@@ -7,6 +7,7 @@
 #include "matrixStack.h"
 
 #define NUM_SEGMENTS 40
+#define QUADRANT_SEGMENTS 10
 
 typedef struct {
 	float r;
@@ -121,6 +122,8 @@ private:
 	void PlotLineX(int x1, int y1, int x2, int y2);
 
 	void PlotLineY(int x1, int y1, int x2, int y2);
+
+	static Vec4 VertexToScreen(const Vec4& vertex, const Matrix& PVM, const Matrix& Vp);
 
 };
 

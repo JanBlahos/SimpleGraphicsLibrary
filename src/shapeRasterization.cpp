@@ -11,6 +11,8 @@ void Context::BresenhamLine(int x1, int y1, int x2, int y2) {
 	if (!is_drawing) {
 		throw SGLInvalidOperationException("Cannot call this function while not drawing.");
 	}
+
+
 	//First aglorithm draws all octants and is easier to code, however should
 	//be slower when both algorithms are optimized
 
@@ -145,8 +147,12 @@ void Context::BresenhamCircle(float x, float y, float z, float radius) {
 	//square root of determinant of the upper left 2x2 part of the matrix
 	// times radius is the new radius
 	auto new_radius = radius * sqrt(mat(0, 0) * mat(1, 1) - (mat(1, 0) * mat(0, 1)));
-	auto new_x = round(vec_in_screen.x);
-	auto new_y = round(vec_in_screen.y);
+	//auto new_x = round(vec_in_screen.x);
+	//auto new_y = round(vec_in_screen.y);
+	 
+	auto new_x = floor(vec_in_screen.x);
+	auto new_y = floor(vec_in_screen.y);
+
 	//TODO use the new_z for depth buffer
 	auto new_z = vec_in_screen.z;
 	// draw the first octant starting point
@@ -201,18 +207,84 @@ void Context::DrawArc(float x, float y, float z, float radius, float from, float
 	EndDrawing();
 }
 
+constexpr std::array<float, 22> precomputed_angles = {
+	1, 0, 0.987688, 0.156434, 0.951057, 0.309017, 0.891007,
+	0.453991, 0.809017, 0.587785, 0.707107, 0.707107, 0.587785,
+	0.809017, 0.45399, 0.891007, 0.309017, 0.951057, 0.156434,
+	0.987688, 0, 1
+};
+
+
+Vec4 Context::VertexToScreen(const Vec4& vertex, const Matrix& PVM, const Matrix& Vp) {
+
+	Vec4 temp = Matrix::Matmul(PVM, vertex);
+	temp.PerspectiveDivide();
+	return Matrix::Matmul(Vp, temp);
+}
+
 void Context::DrawEllipse(float x, float y, float z, float a, float b) {
 	if (is_drawing) {
 		throw SGLInvalidOperationException("Cannot call this function while drawing.");
 	}
-	//TODO draw by quadrants, precompute angles
+	is_drawing = true;
 
-	BeginDrawing(SGL_LINE_LOOP);
-	for (int i = 0; i < NUM_SEGMENTS; i++) {
+	/*std::vector<float> angles_pre;
+	for (int i = 0; i < ((NUM_SEGMENTS / 4) + 1); ++i) {
 		float theta = (2 * PI * i) / NUM_SEGMENTS;
-		float x_pos = x + a * cos(theta);
-		float y_pos = y + b * sin(theta);
-		BufferVertex4f(x_pos, y_pos, 0, 1);
+		std::cout << theta << "\n";
+		float a1 = cos(theta);
+		float a2 = sin(theta);
+		angles_pre.push_back(a1);
+		angles_pre.push_back(a2);
 	}
-	EndDrawing();
+
+	std::cout << "\n";
+	for (auto& el : angles_pre) {
+		std::cout << el << ", ";
+	}
+	std::cout << "\n";
+
+	while (1);*/
+
+	//draw by quadrants, use precomputed angles
+	Matrix PVM = Matrix::Matmul(matrix_stack.GetProjectionMatrix(), matrix_stack.GetViewModelMatrix());
+	const Matrix& Vp = matrix_stack.GetViewport();
+
+	/*if (area_mode == sglEAreaMode::SGL_POINT) {
+
+	}*/
+
+	float non_translated_z = VertexToScreen(Vec4(x, y, z, 1.0f), PVM, Vp).z;
+	PVM = Matrix::Matmul(PVM, Matrix::Translation3D(x, y, z));
+
+	float x_pos = a * precomputed_angles[0];
+	float y_pos = b * precomputed_angles[1];
+
+	Vec4 v1 = VertexToScreen(Vec4{x_pos, y_pos, non_translated_z, 1.0f}, PVM, Vp),
+		 v2 = VertexToScreen(Vec4{ -x_pos, y_pos, non_translated_z, 1.0f }, PVM, Vp),
+		 v3 = VertexToScreen(Vec4{ x_pos, -y_pos, non_translated_z, 1.0f }, PVM, Vp),
+		 v4 = VertexToScreen(Vec4{ -x_pos, -y_pos, non_translated_z, 1.0f }, PVM, Vp);
+
+	for (int i = 1; i < QUADRANT_SEGMENTS+1; i++) {
+		int j = 2 * i;
+		x_pos = a * precomputed_angles[j];
+		y_pos = b * precomputed_angles[j+1];
+
+		Vec4 u1 = VertexToScreen(Vec4{ x_pos, y_pos, non_translated_z, 1.0f }, PVM, Vp),
+			u2 = VertexToScreen(Vec4{ -x_pos, y_pos, non_translated_z, 1.0f }, PVM, Vp),
+			u3 = VertexToScreen(Vec4{ x_pos, -y_pos, non_translated_z, 1.0f }, PVM, Vp),
+			u4 = VertexToScreen(Vec4{ -x_pos, -y_pos, non_translated_z, 1.0f }, PVM, Vp);
+		
+		BresenhamLine(v1.x, v1.y, u1.x, u1.y);
+		BresenhamLine(v2.x, v2.y, u2.x, u2.y);
+		BresenhamLine(v3.x, v3.y, u3.x, u3.y);
+		BresenhamLine(v4.x, v4.y, u4.x, u4.y);
+
+		v1 = u1;
+		v2 = u2;
+		v3 = u3;
+		v4 = u4;
+	}
+
+	is_drawing = false;
 }

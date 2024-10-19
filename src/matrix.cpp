@@ -216,7 +216,7 @@ Matrix Matrix::Matmul(const Matrix& left, const Matrix& right) {
 	return result;
 }
 
-Vec4 Matrix::Matmul(Matrix& mat, const Vec4& vec) {
+Vec4 Matrix::Matmul(const Matrix& mat, const Vec4& vec) {
 	Vec4 result{0.0f, 0.0f, 0.0f, 0.0f };
 	__m128 mat_row, _vec, res;
 
@@ -355,14 +355,9 @@ Matrix Matrix::RotateAroundCenter(float x, float y, float angle) {
 	// however, because of matrix transformations being applied from right
 	// to left we actually need to do this in reverse order
 	Matrix translate_back = Translation3D(x, y, 0);
-	//Matrix::PrintMatrix(translate_back);
 	Matrix rotate = Rotation3D(angle, sglAxis::Z_AXIS);
-	//Matrix::PrintMatrix(rotate);
 	Matrix to_origin = Translation3D(-x, -y, 0);
-	//Matrix::PrintMatrix(translate_back);
-	//Matrix::PrintMatrix(Matmul(rotate, to_origin));
 	Matrix mat = Matmul(translate_back, Matmul(rotate, to_origin));
-	//Matrix::PrintMatrix(mat);
 
 	return mat;
 }

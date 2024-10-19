@@ -200,7 +200,7 @@ public:
 	/// in which case the appropriate components of the output vector will be zeroed.
 	/// </summary>
 	/// <param name="multiplicand"></param>
-	static Vec4 Matmul(Matrix& mat, const Vec4& vec);
+	static Vec4 Matmul(const Matrix& mat, const Vec4& vec);
 
 	/// <summary>
 	///  Returns an identity matrix of dimensionality rows x rows
