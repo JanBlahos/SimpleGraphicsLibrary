@@ -13,7 +13,7 @@ Context::Context(unsigned width, unsigned height) {
 	color_buffer = std::vector<float>(width * height * 3, 0.0f);
 	depth_buffer = std::vector<float>(width * height, std::numeric_limits<float>::max());
 	matrix_stack = MatrixStack();
-	use_incremental_error = true;
+	use_incremental_error = false;
 	Vp_matrix = Matrix::Eye(4);
 	PVM_matrix = Matrix::Eye(4);
 	drawing_mode = SGL_POINTS;

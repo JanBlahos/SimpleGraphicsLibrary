@@ -70,27 +70,25 @@ void Context::BresenhamLine(int x1, int y1, int x2, int y2) {
 /// <param name="x2"> End point x coordinate. Make sure that x2 > x1 </param>
 /// <param name="y2"> End point y coordinate.</param>
 void Context::PlotLineX(int x1, int y1, int x2, int y2) {
-	int delta_y = y2 - y1;
-	int delta_x = x2 - x1;
-	int y_step = y2 >= y1 ? 1 : -1;
-	int k1 = 2 * y_step * delta_y;
-	int k2 = 2 * y_step * (delta_y - delta_x);
-	int p = 2 * delta_y - delta_x;
-	int cur_x = x1;
-	int cur_y = y1;
-	while (true) {
-		//std::cout << "Setting pixel" << cur_x << " " << cur_y <<  " goal is " << x2 << " " << y2 << std::endl;
-		SetPixel(cur_x, cur_y);
-		if (cur_x == x2) {
-			break;
-		}
-		cur_x += 1;
-		if (p * y_step > 0) {
-			cur_y += y_step;
-			p += k2;
-		}
-		else {
-			p += k1;
+	int dx = x2 - x1;
+	int dy = y2 - y1;
+	int yi = 1;
+	if (dy < 0) {
+		yi = -1;
+		dy = -dy;
+	}
+	int D = (2 * dy) - dx;
+	int y = y1;
+	int two_dydx = 2 * (dy - dx);
+	int two_dy = 2 * dy;
+
+	for (int x = x1; x <= x2; ++x) {
+		SetPixel(x, y);
+		if (D > 0) {
+			y += yi;
+			D += two_dydx;
+		} else {
+			D += two_dy;
 		}
 	}
 };
@@ -104,26 +102,26 @@ void Context::PlotLineX(int x1, int y1, int x2, int y2) {
 /// <param name="x2"> End point x coordinate. </param>
 /// <param name="y2"> End point y coordinate.  Make sure that y2 > y1</param>
 void Context::PlotLineY(int x1, int y1, int x2, int y2) {
-	int delta_y = y2 - y1;
-	int delta_x = x2 - x1;
-	int x_step = x2 >= x1 ? 1 : -1;
-	int k1 = 2 * x_step * delta_x;
-	int k2 = 2 * x_step * (delta_x - delta_y);
-	int p = delta_y - 2 * delta_x;
-	int cur_x = x1;
-	int cur_y = y1;
-	while (true) {
-		SetPixel(cur_x, cur_y);
-		if (cur_y == y2) {
-			break;
-		}
-		cur_y += 1;
-		if (p * x_step > 0) {
-			cur_x += x_step;
-			p += k2;
+	int dx = x2 - x1;
+	int dy = y2 - y1;
+	int xi = 1;
+	if (dx < 0) {
+		xi = -1;
+		dx = -dx;
+	}
+	int D = (2 * dx) - dy;
+	int x = x1;
+	int two_dxdy = 2 * (dx - dy);
+	int two_dx = 2 * dx;
+
+	for (int y = y1; y <= y2; ++y) {
+		SetPixel(x, y);
+		if (D > 0) {
+			x += xi;
+			D += two_dxdy;
 		}
 		else {
-			p += k1;
+			D += two_dx;
 		}
 	}
 };
@@ -132,6 +130,8 @@ void Context::BresenhamCircle(float x, float y, float z, float radius) {
 	if (is_drawing) {
 		throw SGLInvalidOperationException("Cannot call this function while drawing.");
 	}
+
+	//TODO check for speed
 
 	BeginDrawing(SGL_POINTS);
 	Vec4 v(x, y, z, 1);
@@ -186,10 +186,11 @@ void Context::DrawArc(float x, float y, float z, float radius, float from, float
 		throw SGLInvalidOperationException("Cannot call this function while drawing.");
 	}
 
+	//TODO get rid of angles, perhaps use different aglorithm
+
 	BeginDrawing(SGL_LINE_STRIP);
 
-	float total_angle = (abs(to - from)) / (2 * PI);
-	int num_vertices = round(NUM_SEGMENTS * total_angle);
+	int num_vertices = round(NUM_SEGMENTS * std::abs(to - from) / (2 * PI));
 
 	for (int i = 0; i < num_vertices; i++) {
 		float theta = from + (to - from) * static_cast<float>(i) / (num_vertices - 1);
@@ -204,6 +205,7 @@ void Context::DrawEllipse(float x, float y, float z, float a, float b) {
 	if (is_drawing) {
 		throw SGLInvalidOperationException("Cannot call this function while drawing.");
 	}
+	//TODO draw by quadrants, precompute angles
 
 	BeginDrawing(SGL_LINE_LOOP);
 	for (int i = 0; i < NUM_SEGMENTS; i++) {

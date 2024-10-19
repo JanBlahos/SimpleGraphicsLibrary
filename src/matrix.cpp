@@ -1,7 +1,8 @@
 #include "matrix.h"
 #include "exceptions.h"
 #include <iostream>
-
+#include <xmmintrin.h>
+#include <pmmintrin.h>
 
 void Vec4::PerspectiveDivide() {
 	if (w == 0) {
@@ -159,7 +160,7 @@ float& Matrix::operator() (unsigned row, unsigned col) {
 			+ std::to_string(_nrows) + "x" + std::to_string(_ncols) + " at invalid position ("
 			+ std::to_string(row) + "," + std::to_string(col) + ")");
 	}
-	return _data[col * _nrows + row];
+	return _data[row * 4 + col];
 }
 
 float Matrix::operator() (unsigned row, unsigned col) const {
@@ -168,7 +169,7 @@ float Matrix::operator() (unsigned row, unsigned col) const {
 			+ std::to_string(_nrows) + "x" + std::to_string(_ncols) + " at invalid position ("
 			+ std::to_string(row) + "," + std::to_string(col) + ")");
 	}
-	return _data[col * _nrows + row];
+	return _data[row * 4 + col];
 }
 
 std::pair<unsigned, unsigned> Matrix::GetDimensions() const {
@@ -195,68 +196,49 @@ void Matrix::PrintMatrix(const Matrix& matrix) {
 /// Implemented naively for now. For speed will need to optimize this
 /// </summary>
 Matrix Matrix::Matmul(const Matrix& left, const Matrix& right) {
-	auto left_dimensions = left.GetDimensions();
-	auto right_dimensions = right.GetDimensions();
-	unsigned left_rows, left_cols, right_rows, right_cols;
-	left_rows = left_dimensions.first;
-	left_cols = left_dimensions.second;
-	right_rows = right_dimensions.first;
-	right_cols = right_dimensions.second;
-
-
-	if (left_cols != right_rows) {
-		throw BadDimensionException("Attempting to multiply matrices with incompatible dimensions"
-			+ std::to_string(left_rows) + "x" + std::to_string(left_cols) + " and "
-			+ std::to_string(right_rows) + "x" + std::to_string(right_cols));
-	}
 
 	Matrix result;
+	__m128 row_left, col_right, res;
 
-	for (unsigned i = 0; i < right_cols; ++i) {
-		for (unsigned j = 0; j < left_rows; ++j) {
-			float sum = 0;
-			for (unsigned k = 0; k < left_cols; ++k) {
-				sum += left(j, k) * right(k, i);
-			}
-			result(j, i) = sum;
+	for (unsigned i = 0; i < 4; ++i) {
+
+		res = _mm_setzero_ps();
+		for (unsigned j = 0; j < 4; ++j) {
+
+			row_left = _mm_set1_ps(left(i, j));
+
+			col_right = _mm_loadu_ps(&right._data[j * 4]);
+
+			res = _mm_add_ps(res, _mm_mul_ps(row_left, col_right));
 		}
+		_mm_storeu_ps(&result._data[i * 4], res);
 	}
-
 	return result;
 }
 
 Vec4 Matrix::Matmul(Matrix& mat, const Vec4& vec) {
-	// also works with 3x3 and 2x2 matrices,
-	// in which case the appropriate components of the output
-	// will be zeroed.
+	Vec4 result{0.0f, 0.0f, 0.0f, 0.0f };
+	__m128 mat_row, _vec, res;
 
-	/*std::cout << "Multiplying matrix" << std::endl;
-	Matrix::PrintMatrix(mat);
-	std::cout << "with vector " << std::endl;
-	Vec4::PrintVector(vec);*/
-	auto mat_dims = mat.GetDimensions();
-	unsigned n_rows, n_cols;
-	n_rows = mat_dims.first;
-	n_cols = mat_dims.second;
+	// load vec (in reverse)
+	_vec = _mm_set_ps(vec.w, vec.z, vec.y, vec.x);
 
-	if (n_cols > 4) {
-		throw BadDimensionException("Attempting to multiply matrix with "
-			+ std::to_string(n_cols) + " columns and 4 component vector");
+	//for each row of matrix
+	for (int i = 0; i < 4; i++) {
+		// load the i-th row of matrix
+		mat_row = _mm_loadu_ps(&mat._data[i * 4]);
+
+		// dot product of row and vector
+		res = _mm_mul_ps(mat_row, _vec);
+
+		//double horizontal add to get x + y + z + w
+		res = _mm_hadd_ps(res, res);
+		res = _mm_hadd_ps(res, res);
+
+		_mm_store_ss(&result(i), res);
 	}
 
-	float vec_data[4] = {};
-	for (unsigned j = 0; j < n_rows; j++) {
-		float sum = 0;
-		for (unsigned k = 0; k < n_cols; k++) {
-			sum += mat(j, k) * vec(k); //TODO check
-			//std::cout << "Adding " << mat(j, k) * vec(k) << " to vector component " << j << std::endl;
-			//sum += _data[j + k * n_rows] * vec(k);
-		}
-		vec_data[j] = sum;
-	}
-	auto ret = Vec4(vec_data[0], vec_data[1], vec_data[2], vec_data[3]);
-	//Vec4::PrintVector(ret);
-	return ret;
+	return result;
 }
 
 Matrix Matrix::Eye(unsigned rows) {

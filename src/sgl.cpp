@@ -392,7 +392,6 @@ void sglMultMatrix(const float *matrix) {
     MatrixStack& ms = cc->matrix_stack;
 
     try {
-        //const Matrix& mat = ms.Top();
         //TODO implement multiplication by (const float* matrix) to avoid copying
         Matrix new_mat = Matrix::Matmul(ms.Top(), Matrix(4, 4, matrix));
         ms.Pop();
