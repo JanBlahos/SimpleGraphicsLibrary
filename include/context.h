@@ -93,12 +93,15 @@ private:
 	int point_size;
 
 	std::vector<float> color_buffer;
-	std::vector<float> depth_buffer;
+	//std::vector<float> depth_buffer;
 
-	std::deque<Point2D> vertex_buffer;
+	//std::deque<Point2D> vertex_buffer;
 
 	//the first specified point during Begin() End() sequence
-	Point2D first_point;
+	Point2D very_first_point;
+	//Point2D current_point;
+	Point2D previous_point;
+	unsigned num_buffered_vertices;
 
 	Matrix PVM_matrix;
 	Matrix Vp_matrix;

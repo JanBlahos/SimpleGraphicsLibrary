@@ -383,6 +383,9 @@ void sglLoadMatrix(const float *matrix) {
 }
 
 void sglMultMatrix(const float *matrix) {
+    //TODO currently shouldnt work as the data supplied as
+    //col1 ... col4, while our representation
+    //requires row1 ... row4
     Context* cc = cm.current_context;
     if (cc == nullptr) {
         setErrCode(SGL_INVALID_OPERATION);

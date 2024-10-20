@@ -11,7 +11,7 @@ Context::Context(unsigned width, unsigned height) {
 	win_height = height;
 	clear_color = Color{ 0.0f, 0.0f, 0.0f };
 	color_buffer = std::vector<float>(width * height * 3, 0.0f);
-	depth_buffer = std::vector<float>(width * height, std::numeric_limits<float>::max());
+	//depth_buffer = std::vector<float>(width * height, std::numeric_limits<float>::max());
 	matrix_stack = MatrixStack();
 	use_incremental_error = false;
 	Vp_matrix = Matrix::Eye(4);
@@ -41,6 +41,7 @@ void Context::ClearBuffer(unsigned buffer_type) {
 		switch (buffer_type) {
 
 		case SGL_COLOR_BUFFER_BIT:
+			//TODO memcpy
 			for (unsigned long i = 0; i < color_buffer.size() / 3; ++i) {
 				color_buffer[i * 3] = clear_color.r;
 				color_buffer[i * 3 + 1] = clear_color.g;
@@ -48,8 +49,8 @@ void Context::ClearBuffer(unsigned buffer_type) {
 			}
 			break;
 		case SGL_DEPTH_BUFFER_BIT:
-			std::fill(depth_buffer.begin(), depth_buffer.end(),
-				std::numeric_limits<float>::max());
+			/*std::fill(depth_buffer.begin(), depth_buffer.end(),
+				std::numeric_limits<float>::max());*/
 			break;
 		default:
 			break;
@@ -80,7 +81,7 @@ unsigned Context::Pixel2Index(unsigned x, unsigned y) {
 
 void Context::SetPixel(unsigned x, unsigned y) {
 	//check if in window
-	if (x < win_width && y < win_height&& x >= 0 && y >= 0) {
+	if (x < win_width && y < win_height && x >= 0 && y >= 0) {
 		unsigned i = Pixel2Index(x, y);
 		color_buffer[i] = drawing_color.r;
 		color_buffer[i + 1] = drawing_color.g;

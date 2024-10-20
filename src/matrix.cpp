@@ -149,6 +149,8 @@ Matrix::Matrix(unsigned rows, unsigned cols, const std::array<float, 16>& data) 
 	}
 	_nrows = rows;
 	_ncols = cols;
+	//TODO this is wrong, we are receiving column major but want
+	//to store row major
 	for (unsigned i = 0; i < rows * cols; i++) {
 		_data[i] = data[i];
 	}
@@ -198,7 +200,8 @@ void Matrix::PrintMatrix(const Matrix& matrix) {
 Matrix Matrix::Matmul(const Matrix& left, const Matrix& right) {
 
 	Matrix result;
-	__m128 row_left, col_right, res;
+
+	/*__m128 row_left, col_right, res;
 
 	for (unsigned i = 0; i < 4; ++i) {
 
@@ -212,7 +215,40 @@ Matrix Matrix::Matmul(const Matrix& left, const Matrix& right) {
 			res = _mm_add_ps(res, _mm_mul_ps(row_left, col_right));
 		}
 		_mm_storeu_ps(&result._data[i * 4], res);
-	}
+	}*/
+
+
+	//todo can hadd to save a bit more
+	__m128 right_row_0 = _mm_loadu_ps(&right.GetData()[0]);
+	__m128 right_row_1 = _mm_loadu_ps(&right.GetData()[4]);
+	__m128 right_row_2 = _mm_loadu_ps(&right.GetData()[8]);
+	__m128 right_row_3 = _mm_loadu_ps(&right.GetData()[12]);
+
+	__m128 new_row_0 = _mm_mul_ps(right_row_0, _mm_set1_ps(left(0, 0)));
+	new_row_0 = _mm_add_ps(new_row_0, _mm_mul_ps(right_row_1, _mm_set1_ps(left(0, 1))));
+	new_row_0 = _mm_add_ps(new_row_0, _mm_mul_ps(right_row_2, _mm_set1_ps(left(0, 2))));
+	new_row_0 = _mm_add_ps(new_row_0, _mm_mul_ps(right_row_3, _mm_set1_ps(left(0, 3))));
+
+	__m128 new_row_1 = _mm_mul_ps(right_row_0, _mm_set1_ps(left(1, 0)));
+	new_row_1 = _mm_add_ps(new_row_1, _mm_mul_ps(right_row_1, _mm_set1_ps(left(1, 1))));
+	new_row_1 = _mm_add_ps(new_row_1, _mm_mul_ps(right_row_2, _mm_set1_ps(left(1, 2))));
+	new_row_1 = _mm_add_ps(new_row_1, _mm_mul_ps(right_row_3, _mm_set1_ps(left(1, 3))));
+
+	__m128 new_row_2 = _mm_mul_ps(right_row_0, _mm_set1_ps(left(2, 0)));
+	new_row_2 = _mm_add_ps(new_row_2, _mm_mul_ps(right_row_1, _mm_set1_ps(left(2, 1))));
+	new_row_2 = _mm_add_ps(new_row_2, _mm_mul_ps(right_row_2, _mm_set1_ps(left(2, 2))));
+	new_row_2 = _mm_add_ps(new_row_2, _mm_mul_ps(right_row_3, _mm_set1_ps(left(2, 3))));
+
+	__m128 new_row_3 = _mm_mul_ps(right_row_0, _mm_set1_ps(left(3, 0)));
+	new_row_3 = _mm_add_ps(new_row_3, _mm_mul_ps(right_row_1, _mm_set1_ps(left(3, 1))));
+	new_row_3 = _mm_add_ps(new_row_3, _mm_mul_ps(right_row_2, _mm_set1_ps(left(3, 2))));
+	new_row_3 = _mm_add_ps(new_row_3, _mm_mul_ps(right_row_3, _mm_set1_ps(left(3, 3))));
+
+	_mm_storeu_ps(&result._data[0], new_row_0);
+	_mm_storeu_ps(&result._data[4], new_row_1);
+	_mm_storeu_ps(&result._data[8], new_row_2);
+	_mm_storeu_ps(&result._data[12], new_row_3);
+
 	return result;
 }
 
