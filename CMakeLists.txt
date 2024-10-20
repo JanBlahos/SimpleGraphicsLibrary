@@ -1,8 +1,14 @@
 project(sgl)
 cmake_minimum_required(VERSION 3.8)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 file(GLOB_RECURSE SGL_CXX "src/*.cpp")
-add_library(${PROJECT_NAME} STATIC ${SGL_CXX} "include/context.h" "src/context.cpp"   "src/contextManager.cpp" "include/contextManager.h" "include/matrixStack.h" "src/matrixStack.cpp" "include/matrix.h" "src/matrix.cpp" "include/exceptions.h" "src/drawingSequence.cpp" "src/shapeRasterization.cpp")
+file(GLOB_RECURSE SGL_HEADERS "include/*.hpp" "include/*.h")
+
+#add_library(${PROJECT_NAME} STATIC ${SGL_CXX} "include/context.h" "src/context.cpp"   "src/contextManager.cpp" "include/contextManager.h" "include/matrixStack.h" "src/matrixStack.cpp" "include/matrix.h" "src/matrix.cpp" "include/exceptions.h" "src/drawingSequence.cpp" "src/shapeRasterization.cpp")
+add_library(${PROJECT_NAME} STATIC ${SGL_CXX} ${SGL_HEADERS})
 
 target_sources(${PROJECT_NAME} PRIVATE ${SGL_CXX})
 

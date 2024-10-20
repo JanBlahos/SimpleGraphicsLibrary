@@ -201,4 +201,24 @@ public:
     }
 };
 
+/// <summary>
+/// Internal error exception, currently unused
+/// </summary>
+class SGLInternalErrorException : public std::exception {
+private:
+    std::string message;
+
+public:
+    SGLInternalErrorException(std::string msg)
+        : message(msg)
+    {
+    }
+
+    // Override the what() method to return the message
+    const char* what() const throw()
+    {
+        return message.c_str();
+    }
+};
+
 #endif

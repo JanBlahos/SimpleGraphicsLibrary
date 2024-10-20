@@ -151,6 +151,7 @@ Matrix::Matrix(unsigned rows, unsigned cols, const std::array<float, 16>& data) 
 	_ncols = cols;
 	//TODO this is wrong, we are receiving column major but want
 	//to store row major
+
 	for (unsigned i = 0; i < rows * cols; i++) {
 		_data[i] = data[i];
 	}
@@ -201,24 +202,6 @@ Matrix Matrix::Matmul(const Matrix& left, const Matrix& right) {
 
 	Matrix result;
 
-	/*__m128 row_left, col_right, res;
-
-	for (unsigned i = 0; i < 4; ++i) {
-
-		res = _mm_setzero_ps();
-		for (unsigned j = 0; j < 4; ++j) {
-
-			row_left = _mm_set1_ps(left(i, j));
-
-			col_right = _mm_loadu_ps(&right._data[j * 4]);
-
-			res = _mm_add_ps(res, _mm_mul_ps(row_left, col_right));
-		}
-		_mm_storeu_ps(&result._data[i * 4], res);
-	}*/
-
-
-	//todo can hadd to save a bit more
 	__m128 right_row_0 = _mm_loadu_ps(&right.GetData()[0]);
 	__m128 right_row_1 = _mm_loadu_ps(&right.GetData()[4]);
 	__m128 right_row_2 = _mm_loadu_ps(&right.GetData()[8]);
@@ -256,15 +239,15 @@ Vec4 Matrix::Matmul(const Matrix& mat, const Vec4& vec) {
 	Vec4 result{0.0f, 0.0f, 0.0f, 0.0f };
 	__m128 mat_row, _vec, res;
 
-	// load vec (in reverse)
+	//load vec (in reverse)
 	_vec = _mm_set_ps(vec.w, vec.z, vec.y, vec.x);
 
 	//for each row of matrix
 	for (int i = 0; i < 4; i++) {
-		// load the i-th row of matrix
+		//load the i-th row of matrix
 		mat_row = _mm_loadu_ps(&mat._data[i * 4]);
 
-		// dot product of row and vector
+		//dot product of row and vector
 		res = _mm_mul_ps(mat_row, _vec);
 
 		//double horizontal add to get x + y + z + w

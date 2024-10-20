@@ -11,6 +11,9 @@ MatrixStack::MatrixStack() {
 MatrixStack::~MatrixStack() {}
 
 void MatrixStack::SetMode(sglEMatrixMode mode) {
+	if (mode > sglEMatrixMode::SGL_PROJECTION) {
+		throw SGLInvalidEnumException("Invalid enum while setting stack mode.");
+	}
 	current_stack_ = mode;
 }
 

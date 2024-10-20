@@ -41,7 +41,6 @@ void Context::ClearBuffer(unsigned buffer_type) {
 		switch (buffer_type) {
 
 		case SGL_COLOR_BUFFER_BIT:
-			//TODO memcpy
 			for (unsigned long i = 0; i < color_buffer.size() / 3; ++i) {
 				color_buffer[i * 3] = clear_color.r;
 				color_buffer[i * 3 + 1] = clear_color.g;
@@ -100,4 +99,8 @@ void Context::DrawPoint(int x1, int y1) {
 			SetPixel(start_x + i, start_y + j);
 		}
 	}
+}
+
+const bool Context::IsDrawing() {
+	return is_drawing;
 }

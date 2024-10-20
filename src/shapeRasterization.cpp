@@ -12,7 +12,6 @@ void Context::BresenhamLine(int x1, int y1, int x2, int y2) {
 		throw SGLInvalidOperationException("Cannot call this function while not drawing.");
 	}
 
-
 	//First aglorithm draws all octants and is easier to code, however should
 	//be slower when both algorithms are optimized
 
@@ -63,14 +62,6 @@ void Context::BresenhamLine(int x1, int y1, int x2, int y2) {
 	}
 }
 
-/// <summary>
-/// Draw line which has greater change
-/// in x axis using the Bresenham algorithm
-/// </summary>
-/// <param name="x1">Start point x coordinate. Maker sure that x1 < x2 </param>
-/// <param name="y1"> Start point y coordinate.</param>
-/// <param name="x2"> End point x coordinate. Make sure that x2 > x1 </param>
-/// <param name="y2"> End point y coordinate.</param>
 void Context::PlotLineX(int x1, int y1, int x2, int y2) {
 	int dx = x2 - x1;
 	int dy = y2 - y1;
@@ -95,14 +86,6 @@ void Context::PlotLineX(int x1, int y1, int x2, int y2) {
 	}
 };
 
-/// <summary>
-/// Draw line which has greater change
-/// in x axis using the Bresenham algorithm
-/// </summary>
-/// <param name="x1">Start point x coordinate. Maker sure that x1 < x2 </param>
-/// <param name="y1"> Start point y coordinate.</param>
-/// <param name="x2"> End point x coordinate. </param>
-/// <param name="y2"> End point y coordinate.  Make sure that y2 > y1</param>
 void Context::PlotLineY(int x1, int y1, int x2, int y2) {
 	int dx = x2 - x1;
 	int dy = y2 - y1;
@@ -133,28 +116,25 @@ void Context::BresenhamCircle(float x, float y, float z, float radius) {
 		throw SGLInvalidOperationException("Cannot call this function while drawing.");
 	}
 
-	//TODO check for speed
-
 	BeginDrawing(SGL_POINTS);
 	Vec4 v(x, y, z, 1);
-	//Vec4::PrintVector(v);
 	Vec4 transformed_vec = Matrix::Matmul(PVM_matrix, v);
 	transformed_vec.PerspectiveDivide();
 	Matrix mat = Matrix::Matmul(Vp_matrix, PVM_matrix);
 	Vec4 vec_in_screen = Matrix::Matmul(Vp_matrix, transformed_vec);
+
 	//TODO. Draw the center point if SGL_POINT fill mode was specified
 
 	//square root of determinant of the upper left 2x2 part of the matrix
 	// times radius is the new radius
 	auto new_radius = radius * sqrt(mat(0, 0) * mat(1, 1) - (mat(1, 0) * mat(0, 1)));
-	//auto new_x = round(vec_in_screen.x);
-	//auto new_y = round(vec_in_screen.y);
 	 
 	auto new_x = floor(vec_in_screen.x);
 	auto new_y = floor(vec_in_screen.y);
 
 	//TODO use the new_z for depth buffer
-	auto new_z = vec_in_screen.z;
+	//auto new_z = vec_in_screen.z;
+
 	// draw the first octant starting point
 	int current_x = 0;
 	int current_y = round(new_radius);
@@ -202,7 +182,7 @@ void Context::DrawArc(float x, float y, float z, float radius, float from, float
 		float theta = from + (to - from) * static_cast<float>(i) / (num_vertices - 1);
 		float x_pos = x + radius * cos(theta);
 		float y_pos = y + radius * sin(theta);
-		BufferVertex4f(x_pos, y_pos, 0, 1);
+		BufferVertex4f(x_pos, y_pos, 0.0f, 1.0f);
 	}
 	EndDrawing();
 }
@@ -228,24 +208,6 @@ void Context::DrawEllipse(float x, float y, float z, float a, float b) {
 	}
 	is_drawing = true;
 
-	/*std::vector<float> angles_pre;
-	for (int i = 0; i < ((NUM_SEGMENTS / 4) + 1); ++i) {
-		float theta = (2 * PI * i) / NUM_SEGMENTS;
-		std::cout << theta << "\n";
-		float a1 = cos(theta);
-		float a2 = sin(theta);
-		angles_pre.push_back(a1);
-		angles_pre.push_back(a2);
-	}
-
-	std::cout << "\n";
-	for (auto& el : angles_pre) {
-		std::cout << el << ", ";
-	}
-	std::cout << "\n";
-
-	while (1);*/
-
 	//draw by quadrants, use precomputed angles
 	Matrix PVM = Matrix::Matmul(matrix_stack.GetProjectionMatrix(), matrix_stack.GetViewModelMatrix());
 	const Matrix& Vp = matrix_stack.GetViewport();
@@ -254,26 +216,25 @@ void Context::DrawEllipse(float x, float y, float z, float a, float b) {
 
 	}*/
 
-	float non_translated_z = VertexToScreen(Vec4(x, y, z, 1.0f), PVM, Vp).z;
 	PVM = Matrix::Matmul(PVM, Matrix::Translation3D(x, y, z));
 
 	float x_pos = a * precomputed_angles[0];
 	float y_pos = b * precomputed_angles[1];
 
-	Vec4 v1 = VertexToScreen(Vec4{x_pos, y_pos, non_translated_z, 1.0f}, PVM, Vp),
-		 v2 = VertexToScreen(Vec4{ -x_pos, y_pos, non_translated_z, 1.0f }, PVM, Vp),
-		 v3 = VertexToScreen(Vec4{ x_pos, -y_pos, non_translated_z, 1.0f }, PVM, Vp),
-		 v4 = VertexToScreen(Vec4{ -x_pos, -y_pos, non_translated_z, 1.0f }, PVM, Vp);
+	Vec4 v1 = VertexToScreen(Vec4{x_pos, y_pos, 0.0f, 1.0f}, PVM, Vp),
+		 v2 = VertexToScreen(Vec4{ -x_pos, y_pos, 0.0f, 1.0f }, PVM, Vp),
+		 v3 = VertexToScreen(Vec4{ x_pos, -y_pos, 0.0f, 1.0f }, PVM, Vp),
+		 v4 = VertexToScreen(Vec4{ -x_pos, -y_pos, 0.0f, 1.0f }, PVM, Vp);
 
 	for (int i = 1; i < QUADRANT_SEGMENTS+1; i++) {
 		int j = 2 * i;
 		x_pos = a * precomputed_angles[j];
 		y_pos = b * precomputed_angles[j+1];
 
-		Vec4 u1 = VertexToScreen(Vec4{ x_pos, y_pos, non_translated_z, 1.0f }, PVM, Vp),
-			u2 = VertexToScreen(Vec4{ -x_pos, y_pos, non_translated_z, 1.0f }, PVM, Vp),
-			u3 = VertexToScreen(Vec4{ x_pos, -y_pos, non_translated_z, 1.0f }, PVM, Vp),
-			u4 = VertexToScreen(Vec4{ -x_pos, -y_pos, non_translated_z, 1.0f }, PVM, Vp);
+		Vec4 u1 = VertexToScreen(Vec4{ x_pos, y_pos, 0.0f, 1.0f }, PVM, Vp),
+			u2 = VertexToScreen(Vec4{ -x_pos, y_pos, 0.0f, 1.0f }, PVM, Vp),
+			u3 = VertexToScreen(Vec4{ x_pos, -y_pos, 0.0f, 1.0f }, PVM, Vp),
+			u4 = VertexToScreen(Vec4{ -x_pos, -y_pos, 0.0f, 1.0f }, PVM, Vp);
 		
 		BresenhamLine(v1.x, v1.y, u1.x, u1.y);
 		BresenhamLine(v2.x, v2.y, u2.x, u2.y);

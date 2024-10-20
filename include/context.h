@@ -80,6 +80,8 @@ public:
 	//sets pixel color in color buffer to current drawing color
 	void SetPixel(unsigned x, unsigned y);
 
+	const bool IsDrawing();
+
 	MatrixStack matrix_stack;
 private:
 	unsigned win_width;
@@ -122,8 +124,24 @@ private:
 
 	void BresenhamLine(int x1, int y1, int x2, int y2);
 
+	/// <summary>
+	/// Draw line which has greater change
+	/// in x axis using the Bresenham algorithm
+	/// </summary>
+	/// <param name="x1">Start point x coordinate. Maker sure that x1 < x2 </param>
+	/// <param name="y1"> Start point y coordinate.</param>
+	/// <param name="x2"> End point x coordinate. Make sure that x2 > x1 </param>
+	/// <param name="y2"> End point y coordinate.</param>
 	void PlotLineX(int x1, int y1, int x2, int y2);
 
+	/// <summary>
+	/// Draw line which has greater change
+	/// in x axis using the Bresenham algorithm
+	/// </summary>
+	/// <param name="x1">Start point x coordinate. Maker sure that x1 < x2 </param>
+	/// <param name="y1"> Start point y coordinate.</param>
+	/// <param name="x2"> End point x coordinate. </param>
+	/// <param name="y2"> End point y coordinate.  Make sure that y2 > y1</param>
 	void PlotLineY(int x1, int y1, int x2, int y2);
 
 	static Vec4 VertexToScreen(const Vec4& vertex, const Matrix& PVM, const Matrix& Vp);
