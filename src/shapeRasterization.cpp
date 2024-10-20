@@ -124,6 +124,7 @@ void Context::BresenhamCircle(float x, float y, float z, float radius) {
 	Vec4 vec_in_screen = Matrix::Matmul(Vp_matrix, transformed_vec);
 
 	//TODO. Draw the center point if SGL_POINT fill mode was specified
+	// hw02
 
 	//square root of determinant of the upper left 2x2 part of the matrix
 	// times radius is the new radius
@@ -133,6 +134,8 @@ void Context::BresenhamCircle(float x, float y, float z, float radius) {
 	auto new_y = floor(vec_in_screen.y);
 
 	//TODO use the new_z for depth buffer
+	// hw02
+
 	//auto new_z = vec_in_screen.z;
 
 	// draw the first octant starting point
@@ -172,8 +175,6 @@ void Context::DrawArc(float x, float y, float z, float radius, float from, float
 		throw SGLInvalidOperationException("Cannot call this function while drawing.");
 	}
 
-	//TODO get rid of angles, perhaps use different aglorithm
-
 	BeginDrawing(SGL_LINE_STRIP);
 
 	int num_vertices = round(NUM_SEGMENTS * std::abs(to - from) / (2 * PI));
@@ -212,8 +213,9 @@ void Context::DrawEllipse(float x, float y, float z, float a, float b) {
 	Matrix PVM = Matrix::Matmul(matrix_stack.GetProjectionMatrix(), matrix_stack.GetViewModelMatrix());
 	const Matrix& Vp = matrix_stack.GetViewport();
 
+	//TODO hw02
 	/*if (area_mode == sglEAreaMode::SGL_POINT) {
-
+		...
 	}*/
 
 	PVM = Matrix::Matmul(PVM, Matrix::Translation3D(x, y, z));

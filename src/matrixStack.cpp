@@ -4,7 +4,6 @@
 #include <iostream>
 
 MatrixStack::MatrixStack() {
-	//TODO Matrix default constructor or viewport raw pointer
 	current_stack_ = SGL_MODELVIEW;
 };
 
@@ -61,7 +60,6 @@ void MatrixStack::Push(const Matrix& matrix) {
 }
 
 void MatrixStack::Duplicate() {
-	//TODO maybe recode, at least check again later
 	const Matrix& top_matrix = Top();
 	auto dimensions = top_matrix.GetDimensions();
 	try {

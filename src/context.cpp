@@ -89,7 +89,6 @@ void Context::SetPixel(unsigned x, unsigned y) {
 }
 
 void Context::DrawPoint(int x1, int y1) {
-	// TODO perhaps shift a bit
 	// no clear definition of even sized points e.g. 2x2
 	int start_x = x1 - point_size / 2;
 	int start_y = y1 - point_size / 2;

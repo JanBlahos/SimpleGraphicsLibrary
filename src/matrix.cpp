@@ -137,6 +137,12 @@ Matrix::Matrix(unsigned rows, unsigned cols, const float* data) {
 	}
 	_nrows = rows;
 	_ncols = cols;
+
+	//TODO this is wrong, we are receiving column major but want
+	//to store row major. works for hw01 since we are always
+	// receiving an identity, change for future. CONFIRM this isnt
+	// used internally before changing
+
 	for (unsigned i = 0; i < rows * cols; i++) {
 		_data[i] = data[i];
 	}
@@ -149,8 +155,6 @@ Matrix::Matrix(unsigned rows, unsigned cols, const std::array<float, 16>& data) 
 	}
 	_nrows = rows;
 	_ncols = cols;
-	//TODO this is wrong, we are receiving column major but want
-	//to store row major
 
 	for (unsigned i = 0; i < rows * cols; i++) {
 		_data[i] = data[i];
