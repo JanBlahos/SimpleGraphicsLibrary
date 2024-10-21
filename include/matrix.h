@@ -11,8 +11,10 @@
 #include <memory>
 #include <array>
 
+#define MATRIX_DIMENSIONS 4
+
 //Would need to include math.h for PI constant
-constexpr float PI = 3.14159265358979323846;
+constexpr float PI = 3.14159265358979323846f;
 
 
 typedef enum {

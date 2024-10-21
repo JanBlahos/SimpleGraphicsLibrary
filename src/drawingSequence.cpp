@@ -95,8 +95,8 @@ void Context::BufferVertex4f(float x, float y, float z, float w) {
 	_tx = vec_in_screen.x;
 	_ty = vec_in_screen.y;
 	int tx, ty;
-	tx = std::floor(_tx);
-	ty = std::floor(_ty);
+	tx = static_cast<int>(std::floor(_tx));
+	ty = static_cast<int>(std::floor(_ty));
 	DrawVertex(tx, ty);
 };
 

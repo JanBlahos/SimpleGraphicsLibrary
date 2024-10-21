@@ -7,32 +7,32 @@ ContextManager::ContextManager() {
 	context_count = 0;
 	current_context_idx = 0;
 	current_context = nullptr;
-	context_container.reserve(32);
-	for (int i = 0; i < 32; ++i) {
+	context_container.reserve(MAX_CONTEXT_COUNT);
+	for (int i = 0; i < MAX_CONTEXT_COUNT; ++i) {
 		context_container.push_back(nullptr);
 	}
 }
 
 int ContextManager::CreateContext(int& width, int& height) {
 	//First try using all 32 indices
-	if (next_idx < 32) {
+	if (next_idx < MAX_CONTEXT_COUNT) {
 		try {
 			context_container[next_idx++] = std::make_unique<Context>(width, height);
 			context_count++;
 		}
-		catch (const std::bad_alloc& ex) {
+		catch (const std::bad_alloc&) {
 			throw OutOfMemoryException("Not enough memory to initialize a new context.");
 		}
 	//Else find first unused index, if possible
 	} else {
-		if (context_count > 31) {
-			for (int i = 0; i < 32; ++i) {
+		if (context_count >= MAX_CONTEXT_COUNT) {
+			for (int i = 0; i < MAX_CONTEXT_COUNT; ++i) {
 				if (context_container[i] == nullptr) {
 					try {
 						context_container[i] = std::make_unique<Context>(width, height);
 						context_count++;
 					}
-					catch (const std::bad_alloc& ex) {
+					catch (const std::bad_alloc&) {
 						throw OutOfMemoryException("Not enough memory to initialize a new context.");
 					}
 				}
@@ -49,7 +49,7 @@ void ContextManager::DestroyContext(int& id) {
 	if (id == current_context_idx) {
 		throw SGLInvalidOperationException("Context with the given id is currently in use.");
 	}
-	if (id > 31 || id < 0 || context_container[id] == nullptr) {
+	if (id >= MAX_CONTEXT_COUNT || id < 0 || context_container[id] == nullptr) {
 		throw SGLInvalidValueException("Invalid context id.");
 	}
 	context_container[id] = nullptr;
@@ -57,7 +57,7 @@ void ContextManager::DestroyContext(int& id) {
 };
 
 void ContextManager::SetContext(int& id) {
-	if (id > 31 || id < 0 || context_container[id] == nullptr) {
+	if (id >= MAX_CONTEXT_COUNT || id < 0 || context_container[id] == nullptr) {
 		throw SGLInvalidValueException("Invalid context id.");
 		//error_code = SGL_INVALID_VALUE;
 		//return;

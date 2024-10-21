@@ -17,7 +17,7 @@ void Context::BresenhamLine(int x1, int y1, int x2, int y2) {
 
 	//Pseudocode can be found on Wikipedia: https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
 
-	if (use_incremental_error) {
+	if (USE_INCREMENTAL_ERROR) {
 		int dx = std::abs(x2 - x1);
 		int dy = -std::abs(y2 - y1);
 
@@ -130,8 +130,8 @@ void Context::BresenhamCircle(float x, float y, float z, float radius) {
 	// times radius is the new radius
 	auto new_radius = radius * sqrt(mat(0, 0) * mat(1, 1) - (mat(1, 0) * mat(0, 1)));
 	 
-	auto new_x = floor(vec_in_screen.x);
-	auto new_y = floor(vec_in_screen.y);
+	auto new_x = static_cast<int>(floor(vec_in_screen.x));
+	auto new_y = static_cast<int>(floor(vec_in_screen.y));
 
 	//TODO use the new_z for depth buffer
 	// hw02
@@ -140,12 +140,12 @@ void Context::BresenhamCircle(float x, float y, float z, float radius) {
 
 	// draw the first octant starting point
 	int current_x = 0;
-	int current_y = round(new_radius);
+	int current_y = static_cast<int>(round(new_radius));
 	//initialize the Bressenham algorithm constants
 	int dvex = 3;
-	int dvey = 2 * new_radius - 2;
+	int dvey = static_cast<int>(2 * new_radius - 2);
 	//initialize the decision constant
-	int p = 1 - new_radius;
+	int p = static_cast<int>(1 - new_radius);
 	while (current_x <= current_y) {
 		//draw the 8 symmetrical vertices
 		SetPixel(new_x + current_x, new_y + current_y);
@@ -177,7 +177,12 @@ void Context::DrawArc(float x, float y, float z, float radius, float from, float
 
 	BeginDrawing(SGL_LINE_STRIP);
 
-	int num_vertices = round(NUM_SEGMENTS * std::abs(to - from) / (2 * PI));
+	//if difference is too big, keep subtracting 2pi
+	while (to - from > 2 * PI) to -= 2 * PI;
+	//fix drawing arc where to < from
+	while (from > to) from -= 2 * PI;
+
+	int num_vertices = static_cast<int>(std::round(NUM_SEGMENTS * std::abs(to - from) / (2 * PI)));
 
 	for (int i = 0; i < num_vertices; i++) {
 		float theta = from + (to - from) * static_cast<float>(i) / (num_vertices - 1);
@@ -189,10 +194,10 @@ void Context::DrawArc(float x, float y, float z, float radius, float from, float
 }
 
 constexpr std::array<float, 22> precomputed_angles = {
-	1, 0, 0.987688, 0.156434, 0.951057, 0.309017, 0.891007,
-	0.453991, 0.809017, 0.587785, 0.707107, 0.707107, 0.587785,
-	0.809017, 0.45399, 0.891007, 0.309017, 0.951057, 0.156434,
-	0.987688, 0, 1
+	1.0f, 0.0f, 0.987688f, 0.156434f, 0.951057f, 0.309017f, 0.891007f,
+	0.453991f, 0.809017f, 0.587785f, 0.707107f, 0.707107f, 0.587785f,
+	0.809017f, 0.45399f, 0.891007f, 0.309017f, 0.951057f, 0.156434f,
+	0.987688f, 0.0f, 1.0f
 };
 
 
@@ -237,11 +242,11 @@ void Context::DrawEllipse(float x, float y, float z, float a, float b) {
 			u2 = VertexToScreen(Vec4{ -x_pos, y_pos, 0.0f, 1.0f }, PVM, Vp),
 			u3 = VertexToScreen(Vec4{ x_pos, -y_pos, 0.0f, 1.0f }, PVM, Vp),
 			u4 = VertexToScreen(Vec4{ -x_pos, -y_pos, 0.0f, 1.0f }, PVM, Vp);
-		
-		BresenhamLine(v1.x, v1.y, u1.x, u1.y);
-		BresenhamLine(v2.x, v2.y, u2.x, u2.y);
-		BresenhamLine(v3.x, v3.y, u3.x, u3.y);
-		BresenhamLine(v4.x, v4.y, u4.x, u4.y);
+
+		BresenhamLine(static_cast<int>(v1.x), static_cast<int>(v1.y), static_cast<int>(u1.x), static_cast<int>(u1.y));
+		BresenhamLine(static_cast<int>(v2.x), static_cast<int>(v2.y), static_cast<int>(u2.x), static_cast<int>(u2.y));
+		BresenhamLine(static_cast<int>(v3.x), static_cast<int>(v3.y), static_cast<int>(u3.x), static_cast<int>(u3.y));
+		BresenhamLine(static_cast<int>(v4.x), static_cast<int>(v4.y), static_cast<int>(u4.x), static_cast<int>(u4.y));
 
 		v1 = u1;
 		v2 = u2;

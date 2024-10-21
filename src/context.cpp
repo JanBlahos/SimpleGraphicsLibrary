@@ -4,16 +4,16 @@
 #include <stdexcept>
 #include <iostream>
 #include <limits>
+#include <execution>
 
 Context::Context(unsigned width, unsigned height) {
 	is_drawing = false;
 	win_width = width;
 	win_height = height;
 	clear_color = Color{ 0.0f, 0.0f, 0.0f };
-	color_buffer = std::vector<float>(width * height * 3, 0.0f);
+	//hw02
 	//depth_buffer = std::vector<float>(width * height, std::numeric_limits<float>::max());
 	matrix_stack = MatrixStack();
-	use_incremental_error = false;
 	Vp_matrix = Matrix::Eye(4);
 	PVM_matrix = Matrix::Eye(4);
 	drawing_mode = SGL_POINTS;
@@ -41,11 +41,30 @@ void Context::ClearBuffer(unsigned buffer_type) {
 		switch (buffer_type) {
 
 		case SGL_COLOR_BUFFER_BIT:
-			for (unsigned long i = 0; i < color_buffer.size() / 3; ++i) {
+			if (color_buffer.size() == 0) {
+				color_buffer.reserve(win_width * win_height * 3);
+				color_buffer.resize(win_width * win_height * 3);
+			}
+
+			std::for_each(std::execution::par, color_buffer.begin(), color_buffer.end(),
+				[&, i = 0](float& val) mutable {
+					switch (i % 3) {
+						case 0: val = clear_color.r;
+							break;
+						case 1: val = clear_color.g;
+							break;
+						case 2: val = clear_color.b;
+							break;
+					}
+					++i;
+				});
+
+			/*for (unsigned long i = 0; i < color_buffer.capacity() / 3; ++i) {
 				color_buffer[i * 3] = clear_color.r;
 				color_buffer[i * 3 + 1] = clear_color.g;
 				color_buffer[i * 3 + 2] = clear_color.b;
-			}
+			}*/
+
 			break;
 		case SGL_DEPTH_BUFFER_BIT:
 			/*std::fill(depth_buffer.begin(), depth_buffer.end(),
@@ -71,7 +90,7 @@ void Context::SetPointSize(float size) {
 	if (is_drawing) {
 		throw SGLInvalidOperationException("Cannot call this function while drawing.");
 	}
-	point_size = size;
+	point_size = static_cast<int>(size);
 };
 
 unsigned Context::Pixel2Index(unsigned x, unsigned y) {
@@ -80,6 +99,7 @@ unsigned Context::Pixel2Index(unsigned x, unsigned y) {
 
 void Context::SetPixel(unsigned x, unsigned y) {
 	//check if in window
+	//TODO can check for the whole primitive
 	if (x < win_width && y < win_height && x >= 0 && y >= 0) {
 		unsigned i = Pixel2Index(x, y);
 		color_buffer[i] = drawing_color.r;

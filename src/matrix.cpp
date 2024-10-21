@@ -113,8 +113,8 @@ float Vec4::operator() (unsigned position) const {
 }
 
 Matrix::Matrix() {
-	_nrows = 4;
-	_ncols = 4;
+	_nrows = MATRIX_DIMENSIONS;
+	_ncols = MATRIX_DIMENSIONS;
 	_data.fill(0.0f);
 }
 
@@ -138,13 +138,12 @@ Matrix::Matrix(unsigned rows, unsigned cols, const float* data) {
 	_nrows = rows;
 	_ncols = cols;
 
-	//TODO this is wrong, we are receiving column major but want
-	//to store row major. works for hw01 since we are always
-	// receiving an identity, change for future. CONFIRM this isnt
-	// used internally before changing
-
-	for (unsigned i = 0; i < rows * cols; i++) {
-		_data[i] = data[i];
+	//changed internal representation to  data = <row1, row2, row3, row4>
+	//but we receive <col1 ... col4>
+	for (unsigned i = 0; i < MATRIX_DIMENSIONS; i++) {
+		for (unsigned j = 0; j < MATRIX_DIMENSIONS; j++) {
+			_data[i + 4 * j] = data[j + 4 * i];
+		}
 	}
 }
 
@@ -199,9 +198,6 @@ void Matrix::PrintMatrix(const Matrix& matrix) {
 	std::cout << "Finished printing matrix " << std::endl;
 }
 
-/// <summary>
-/// Implemented naively for now. For speed will need to optimize this
-/// </summary>
 Matrix Matrix::Matmul(const Matrix& left, const Matrix& right) {
 
 	Matrix result;
@@ -267,7 +263,7 @@ Vec4 Matrix::Matmul(const Matrix& mat, const Vec4& vec) {
 Matrix Matrix::Eye(unsigned rows) {
 	Matrix mat(rows, rows);
 	for (unsigned i = 0; i < rows; i++) {
-		mat(i, i) = 1;
+		mat(i, i) = 1.0f;
 	}
 	return mat;
 }
@@ -332,7 +328,7 @@ Matrix Matrix::Orthographic3D(float left, float right, float top
 	mat(0, 3) = -(right + left) / side_difference;
 	mat(1, 3) = -(top + bottom) / top_difference;
 	mat(2, 3) = -(far + near) / plane_difference;
-	mat(3, 3) = 1;
+	mat(3, 3) = 1.0f;
 
 	return mat;
 }
@@ -341,12 +337,12 @@ Matrix Matrix::Viewport(int x, int y, int width, int height) {
 	auto width_half = width / 2;
 	auto height_half = height / 2;
 	Matrix mat;
-	mat(0, 0) = width_half;
-	mat(1, 1) = height_half;
-	mat(0, 3) = x + width_half;
-	mat(1, 3) = y + height_half;
-	mat(2, 2) = 1;
-	mat(3, 3) = 1;
+	mat(0, 0) = static_cast<float>(width_half);
+	mat(1, 1) = static_cast<float>(height_half);
+	mat(0, 3) = x + static_cast<float>(width_half);
+	mat(1, 3) = y + static_cast<float>(height_half);
+	mat(2, 2) = 1.0f;
+	mat(3, 3) = 1.0f;
 
 	return mat;
 }
@@ -363,12 +359,12 @@ Matrix Matrix::LookAt(const Vec4& eye, const Vec4& center, const Vec4& up) {
 		mat(0, i) = xaxis(i);
 		mat(1, i) = yaxis(i);
 		mat(2, i) = zaxis(i);
-		mat(3, i) = 0;
+		mat(3, i) = 0.0f;
 	}
 	mat(0, 3) = -eye.dot(xaxis);
 	mat(1, 3) = -eye.dot(yaxis);
 	mat(2, 3) = -eye.dot(zaxis);
-	mat(3, 3) = 1;
+	mat(3, 3) = 1.0f;
 	return mat;
 }
 
