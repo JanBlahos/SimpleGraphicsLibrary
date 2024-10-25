@@ -341,7 +341,12 @@ Matrix Matrix::Viewport(int x, int y, int width, int height) {
 	mat(1, 1) = static_cast<float>(height_half);
 	mat(0, 3) = x + static_cast<float>(width_half);
 	mat(1, 3) = y + static_cast<float>(height_half);
-	mat(2, 2) = 1.0f;
+	//TODO the following calculations assume z = 0 
+	// and d = 1 in the Viewport calculation
+	// update this based on the depth buffer
+	mat(2, 2) = 1.0f / 2;
+	mat(2, 3) = 1.0f / 2;
+
 	mat(3, 3) = 1.0f;
 
 	return mat;
@@ -379,4 +384,20 @@ Matrix Matrix::RotateAroundCenter(float x, float y, float angle) {
 	Matrix mat = Matmul(translate_back, Matmul(rotate, to_origin));
 
 	return mat;
+}
+
+Matrix Matrix::Frustum3D(float left, float right, float bottom, float top, float near, float far) {
+	// Create a perspective projection matrix
+	// for derivation see https://www.songho.ca/opengl/gl_projectionmatrix.html
+
+	Matrix mat = Orthographic3D(left, right, bottom, top, near, far);
+	auto plane_difference = far - near;
+	mat(0, 0) = mat(0, 0) * near;
+	mat(1, 1) = mat(1, 1) * near;
+	mat(2, 2) = (-(far + near)) / plane_difference;
+	mat(2, 3) = (-2 * far * near) / plane_difference;
+	mat(3, 2) = -1;
+	mat(3, 3) = 0;
+	return mat;
+
 }

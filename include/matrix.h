@@ -243,7 +243,7 @@ public:
 	static Matrix Translation3D(float x, float y, float z);
 
 	/// <summary>
-	/// Create and orthographic projection matrix,
+	/// Create an orthographic projection matrix,
 	/// with the given cube parameters and far and near plane.
 	/// </summary>
 	/// <param name="left"> Left side of the cube</param>
@@ -257,7 +257,20 @@ public:
 		, float bottom, float near, float far);
 
 	/// <summary>
-	/// Create a 3 x 3 viewport matrix.
+	/// Create a perspective projection matrix,
+	/// with the given frustrum parameters
+	/// </summary>
+	/// <param name="left">Left side of the frustum </param>
+	/// <param name="right">Right side of the frustum</param>
+	/// <param name="bottom">Bottom side of the frustum</param>
+	/// <param name="top">Top side of the frustum</param>
+	/// <param name="">Location of the near plane</param>
+	/// <param name="">Location of the far plane</param>
+	/// <returns></returns>
+	static Matrix Frustum3D(float left, float right, float bottom, float top, float near, float far);
+
+	/// <summary>
+	/// Create a 4 x 4 viewport matrix.
 	/// </summary>
 	/// <param name="x"> x coordinate of bottom left corner of projection plane </param>
 	/// <param name="y"> y coordinate of bottom left corner of projection plane </param>

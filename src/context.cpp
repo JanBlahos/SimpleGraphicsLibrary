@@ -16,8 +16,15 @@ Context::Context(unsigned width, unsigned height) {
 	matrix_stack = MatrixStack();
 	Vp_matrix = Matrix::Eye(4);
 	PVM_matrix = Matrix::Eye(4);
+	buckets_per_height = new EdgeBucketList[height];
+	active_buckets = EdgeBucketList{};
 	drawing_mode = SGL_POINTS;
+	filling_mode = SGL_POINT;
 };
+
+Context::~Context() {
+	delete[] buckets_per_height;
+}
 
 float* Context::GetColorBufferPtr(void) {
 	return color_buffer.data();
@@ -29,6 +36,10 @@ void Context::SetClearColor(float r, float g, float b) {
 	} else {
 		clear_color = Color{ r, g, b };
 	}
+}
+
+void Context::SetAreaMode(sglEAreaMode mode) {
+	filling_mode = mode;
 }
 
 void Context::ClearBuffer(unsigned buffer_type) {

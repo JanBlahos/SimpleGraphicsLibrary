@@ -449,7 +449,21 @@ void sglOrtho(float left, float right, float bottom, float top, float near, floa
     })
 }
 
-void sglFrustum(float left, float right, float bottom, float top, float near, float far) {}
+void sglFrustum(float left, float right, float bottom, float top, float near, float far) {
+    Context* cc = cm.current_context;
+    if (cc == nullptr) {
+        setErrCode(SGL_INVALID_OPERATION);
+        return;
+    }
+
+    MatrixStack& ms = cc->matrix_stack;
+
+    TRY_HANDLE_EXCEPTIONS({
+        Matrix new_mat = Matrix::Matmul(ms.Top(), Matrix::Frustum3D(left, right, top, bottom, near, far));
+        ms.Pop();
+        ms.Push(new_mat);
+        })
+}
 
 void sglViewport(int x, int y, int width, int height) {
     Context* cc = cm.current_context;
@@ -482,7 +496,16 @@ void sglColor3f(float r, float g, float b) {
 }
 
 void sglAreaMode(sglEAreaMode mode) {
-    //TODO hw2
+    Context* cc = cm.current_context;
+    if (cc != nullptr) {
+
+        TRY_HANDLE_EXCEPTIONS({
+            cc->SetAreaMode(mode);
+            })
+    }
+    else {
+        setErrCode(SGL_INVALID_OPERATION);
+    }
 }
 
 void sglPointSize(float size) {
