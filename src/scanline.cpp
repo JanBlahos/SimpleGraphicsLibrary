@@ -48,6 +48,8 @@ void Context::AddEdge(float x1, int y1, float x2, int y2) {
 	if (y1 == y2) {
 		return;
 	}
+	/// TODO: not sure if this slope is correct 
+	/// or if it should be 1 / this value.
 	float slope =  x1 == x2 ? 0.0f : (static_cast<float> (y2 - y1)) / (x2 - x1);
 	int y_start, y_end;
 	float x_start;
@@ -78,6 +80,13 @@ void Context::FillLine(int height) {
 	}
 }
 
+void Context::UpdateBucketsBySlope() {
+	for (int i = 0; i < active_buckets.count; i++) {
+		auto& bucket = active_buckets.buckets[i];
+		bucket.curr_x = bucket.curr_x + bucket.slope;
+	}
+}
+
 
 void Context::Fill() {
 	for (int h = win_height; h >= 0; h--) {
@@ -85,8 +94,9 @@ void Context::Fill() {
 		auto& bucket_list = buckets_per_height[h];
 		for (int i = 0; i < bucket_list.count; i++) {
 			auto bucket = bucket_list.buckets[i];
-			AddToBuckets(bucket.curr_x + ((win_height - h) * bucket.slope), bucket.y_lower, bucket.slope, active_buckets);
+			AddToBuckets(bucket.curr_x, bucket.y_lower, bucket.slope, active_buckets);
 			FillLine(h);
+			UpdateBucketsBySlope();
 		}
 	}
 }

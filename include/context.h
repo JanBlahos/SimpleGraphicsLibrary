@@ -306,6 +306,12 @@ private:
 	/// </summary>
 	/// <param name="height"> Current line height </param>
 	void RemoveBucketsByBounds(int height);
+
+	/// <summary>
+	/// For each bucket in the currently active list move the current
+	/// x by slope
+	/// </summary>
+	void UpdateBucketsBySlope();
 };
 
 #endif // !_CONTEXT_H_
