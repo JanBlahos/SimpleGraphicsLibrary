@@ -1,5 +1,17 @@
 #include "context.h"
 
+
+
+void Context::InitScanLine() {
+	buckets_per_height = new EdgeBucketList[win_height];
+	active_buckets = EdgeBucketList{};
+}
+
+void Context::EndScanLine() {
+	delete[] buckets_per_height;
+	active_buckets = EdgeBucketList{};
+}
+
 void Context::AddToBuckets(float curr_x, int y_lower, float slope, EdgeBucketList& bucket_list) {
 	bucket_list.buckets[bucket_list.count].curr_x = curr_x;
 	bucket_list.buckets[bucket_list.count].y_lower = y_lower;
@@ -65,6 +77,8 @@ void Context::AddEdge(float x1, int y1, float x2, int y2) {
 		y_end = y2 + 1;
 		x_start = x1;
 	}
+	max_y = std::max(y_start, max_y);
+	min_y = std::min(y_end, min_y);
 	AddToBuckets(x_start, y_end, slope, buckets_per_height[y_start]);
 }
 
@@ -89,7 +103,7 @@ void Context::UpdateBucketsBySlope() {
 
 
 void Context::Fill() {
-	for (int h = win_height; h >= 0; h--) {
+	for (int h = max_y; h >= min_y; h--) {
 		RemoveBucketsByBounds(h);
 		auto& bucket_list = buckets_per_height[h];
 		for (int i = 0; i < bucket_list.count; i++) {
@@ -99,4 +113,5 @@ void Context::Fill() {
 			UpdateBucketsBySlope();
 		}
 	}
+	EndScanLine();
 }

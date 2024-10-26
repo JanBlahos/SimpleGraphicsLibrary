@@ -195,8 +195,14 @@ public:
 private:
 	unsigned win_width;
 	unsigned win_height;
+
+	///****
+	/// SCANLINE ALGORITHM VARIABLES
+	///****
 	EdgeBucketList* buckets_per_height;
 	EdgeBucketList active_buckets;
+	int min_y;
+	int max_y;
 
 	bool is_drawing;
 	Color clear_color;
@@ -276,6 +282,19 @@ private:
 	///***
 	/// SCAN LINE ALGORITHM FUNCTIONS
 	/// ***///
+
+	/// <summary>
+	/// Initialize scanline algorithm to prepare it 
+	/// for polygon edge addition
+	/// </summary>
+	void InitScanLine();
+
+	/// <summary>
+	/// When a polygon has been 
+	/// succesfully filled destroy currently stored data
+	/// to prepare for the next InitScanLine call.
+	/// </summary>
+	void EndScanLine();
 
 	/// <summary>
 	/// Sorts edge buckets used for filling in 

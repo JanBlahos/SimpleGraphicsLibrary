@@ -16,14 +16,13 @@ Context::Context(unsigned width, unsigned height) {
 	matrix_stack = MatrixStack();
 	Vp_matrix = Matrix::Eye(4);
 	PVM_matrix = Matrix::Eye(4);
-	buckets_per_height = new EdgeBucketList[height];
-	active_buckets = EdgeBucketList{};
 	drawing_mode = SGL_POINTS;
 	filling_mode = SGL_POINT;
+	max_y = 0;
+	min_y = height;
 };
 
 Context::~Context() {
-	delete[] buckets_per_height;
 }
 
 float* Context::GetColorBufferPtr(void) {
