@@ -522,11 +522,29 @@ void sglPointSize(float size) {
 }
 
 void sglEnable(sglEEnableFlags cap) {
-    //TODO for depthbuffer test
+    Context* cc = cm.current_context;
+    if (cc != nullptr) {
+
+        TRY_HANDLE_EXCEPTIONS({
+            cc->Enable(cap);
+            })
+    }
+    else {
+        setErrCode(SGL_INVALID_OPERATION);
+    }
 }
 
 void sglDisable(sglEEnableFlags cap) {
-    //TODO for depthbuffer test
+    Context* cc = cm.current_context;
+    if (cc != nullptr) {
+
+        TRY_HANDLE_EXCEPTIONS({
+            cc->Disable(cap);
+            })
+    }
+    else {
+        setErrCode(SGL_INVALID_OPERATION);
+    }
 }
 
 //---------------------------------------------------------------------------

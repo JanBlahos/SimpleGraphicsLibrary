@@ -27,6 +27,12 @@ void Context::BeginDrawing(sglEElementType mode) {
 	PVM_matrix = Matrix::Matmul(P, VM);
 
 	Vp_matrix = matrix_stack.GetViewport();
+
+	if (filling_mode == SGL_FILL) {
+		InitScanLine();
+	}
+	
+	//std::cout << "begin drawing\n";
 };
 
 void Context::EndDrawing() {
@@ -40,7 +46,17 @@ void Context::EndDrawing() {
 	if (drawing_mode == SGL_LINE_LOOP) {
 		BresenhamLine(very_first_point.x, very_first_point.y, previous_point.x, previous_point.y);
 	}
+	else if (drawing_mode == SGL_POLYGON) {
+		if (filling_mode == SGL_FILL) {
+			AddEdge(very_first_point.x, very_first_point.y, previous_point.x, previous_point.y);
+			Fill();
+			EndScanLine();
+		} else {
+			BresenhamLine(very_first_point.x, very_first_point.y, previous_point.x, previous_point.y);
+		}
+	}
 	is_drawing = false;
+	//std::cout << "end drawing\n";
 };
 
 void Context::DrawVertex(int x1, int y1) {
@@ -78,7 +94,23 @@ void Context::DrawVertex(int x1, int y1) {
 		}
 		previous_point = Point2D{ x1, y1 };
 		break;
-		//TODO triangles, polygon, etc. (from sglEElementType)
+	case SGL_TRIANGLES:
+		//TODO not used yet?
+		break;
+	case SGL_POLYGON: //same as line loop?
+		if (num_buffered_vertices == 1) {
+			very_first_point.x = x1;
+			very_first_point.y = y1;
+		} else {
+			if (filling_mode == SGL_FILL) {
+				AddEdge(previous_point.x, previous_point.y, x1, y1);
+			}
+			else {
+				BresenhamLine(previous_point.x, previous_point.y, x1, y1);
+			}
+		}
+		previous_point = Point2D{ x1, y1 };
+		break;
 	default:
 		break;
 	}

@@ -24,7 +24,7 @@ typedef struct edgebucket {
 }EdgeBucket;
 
 typedef struct edgebucketlist {
-	int count;
+	int count = 0;
 	EdgeBucket buckets[MAX_VERTICES];
 
 }EdgeBucketList;
@@ -160,6 +160,18 @@ public:
 	void SetAreaMode(sglEAreaMode mode);
 
 	/// <summary>
+	/// Enables functions given by bitmask
+	/// </summary>
+	/// <param name="mode"></param>
+	void Enable(sglEEnableFlags what);
+
+	/// <summary>
+	/// Disables functions given by bitmask
+	/// </summary>
+	/// <param name="mode"></param>
+	void Disable(sglEEnableFlags what);
+
+	/// <summary>
 	/// Sets pixel color in color buffer to current drawing color
 	/// </summary>
 	/// <param name="x"> pixel x coordinate</param>
@@ -208,13 +220,13 @@ private:
 	Color clear_color;
 	sglEElementType drawing_mode;
 	sglEAreaMode filling_mode;
+	bool depth_test;
 
 	Color drawing_color;
 	int point_size;
 
 	std::vector<float> color_buffer;
-	//hw02
-	//std::vector<float> depth_buffer;
+	std::vector<float> depth_buffer;
 
 	//the first specified point during Begin() End() sequence
 	Point2D very_first_point;

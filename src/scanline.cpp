@@ -1,5 +1,5 @@
 #include "context.h"
-
+#include <iostream>
 
 
 void Context::InitScanLine() {
@@ -8,8 +8,11 @@ void Context::InitScanLine() {
 }
 
 void Context::EndScanLine() {
-	delete[] buckets_per_height;
-	active_buckets = EdgeBucketList{};
+	//TODO delete throws an error, use a unique_ptr instead?
+	// not important now
+	
+	//delete[] buckets_per_height;
+	//active_buckets = EdgeBucketList{};
 }
 
 void Context::AddToBuckets(float curr_x, int y_lower, float slope, EdgeBucketList& bucket_list) {
@@ -47,6 +50,8 @@ void Context::SortBuckets(EdgeBucketList& bucket_list) {
 			bucket_list.buckets[j + 1].y_lower = bucket_list.buckets[j].y_lower;
 			bucket_list.buckets[j + 1].curr_x = bucket_list.buckets[j].curr_x;
 			bucket_list.buckets[j + 1].slope = bucket_list.buckets[j].slope;
+			//TODO added j-- hope thats correct
+			j--;
 		}
 		bucket_list.buckets[j + 1].y_lower = temp.y_lower;
 		bucket_list.buckets[j + 1].curr_x = temp.curr_x;
@@ -79,6 +84,7 @@ void Context::AddEdge(float x1, int y1, float x2, int y2) {
 	}
 	max_y = std::max(y_start, max_y);
 	min_y = std::min(y_end, min_y);
+
 	AddToBuckets(x_start, y_end, slope, buckets_per_height[y_start]);
 }
 

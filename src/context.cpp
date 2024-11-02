@@ -11,11 +11,11 @@ Context::Context(unsigned width, unsigned height) {
 	win_width = width;
 	win_height = height;
 	clear_color = Color{ 0.0f, 0.0f, 0.0f };
-	//hw02
-	//depth_buffer = std::vector<float>(width * height, std::numeric_limits<float>::max());
+	depth_buffer = std::vector<float>(width * height, std::numeric_limits<float>::max());
 	matrix_stack = MatrixStack();
 	Vp_matrix = Matrix::Eye(4);
 	PVM_matrix = Matrix::Eye(4);
+	depth_test = false;
 	drawing_mode = SGL_POINTS;
 	filling_mode = SGL_POINT;
 	max_y = 0;
@@ -41,14 +41,14 @@ void Context::SetAreaMode(sglEAreaMode mode) {
 	filling_mode = mode;
 }
 
-void Context::ClearBuffer(unsigned buffer_type) {
+void Context::ClearBuffer(unsigned bitmask) {
 	if (is_drawing) {
 		throw SGLInvalidOperationException("Cannot call this function while drawing.");
 	}
-	else if (buffer_type > SGL_DEPTH_BUFFER_BIT) {
+	else if (bitmask > (SGL_DEPTH_BUFFER_BIT | SGL_COLOR_BUFFER_BIT)) {
 		throw SGLInvalidValueException("Invalid bitmask passed to the function.");
 	} else {
-		switch (buffer_type) {
+		switch (bitmask) {
 
 		case SGL_COLOR_BUFFER_BIT:
 			if (color_buffer.size() == 0) {
@@ -77,8 +77,12 @@ void Context::ClearBuffer(unsigned buffer_type) {
 
 			break;
 		case SGL_DEPTH_BUFFER_BIT:
-			/*std::fill(depth_buffer.begin(), depth_buffer.end(),
-				std::numeric_limits<float>::max());*/
+			std::fill(depth_buffer.begin(), depth_buffer.end(),
+				std::numeric_limits<float>::max());
+			break;
+		case (SGL_DEPTH_BUFFER_BIT | SGL_COLOR_BUFFER_BIT):
+			ClearBuffer(SGL_COLOR_BUFFER_BIT);
+			ClearBuffer(SGL_DEPTH_BUFFER_BIT);
 			break;
 		default:
 			break;
@@ -132,4 +136,23 @@ void Context::DrawPoint(int x1, int y1) {
 
 const bool Context::IsDrawing() {
 	return is_drawing;
+}
+
+void Context::Enable(sglEEnableFlags what) {
+	if (what > SGL_DEPTH_TEST) {
+		throw SGLInvalidEnumException("Unrecognized enum.");
+	} else if (is_drawing) {
+		throw SGLInvalidOperationException("Function called inside drawing sequence.");
+	}
+	depth_test = true;
+}
+
+void Context::Disable(sglEEnableFlags what) {
+	if (what > SGL_DEPTH_TEST) {
+		throw SGLInvalidEnumException("Unrecognized enum.");
+	}
+	else if (is_drawing) {
+		throw SGLInvalidOperationException("Function called inside drawing sequence.");
+	}
+	depth_test = false;
 }
