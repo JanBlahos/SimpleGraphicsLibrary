@@ -211,7 +211,7 @@ private:
 	///****
 	/// SCANLINE ALGORITHM VARIABLES
 	///****
-	EdgeBucketList* buckets_per_height;
+	std::unique_ptr<EdgeBucketList[]> buckets_per_height;
 	EdgeBucketList active_buckets;
 	int min_y;
 	int max_y;
@@ -290,6 +290,16 @@ private:
 	/// <param name="PVM">PVM matrix</param>
 	/// <param name="Vp">Viewport matrix</param>
 	static Vec4 VertexToScreen(const Vec4& vertex, const Matrix& PVM, const Matrix& Vp);
+
+	/// <summary>
+	/// Helper function for drawing 8 symmetrical vertices/lines for circle
+	/// </summary>
+	/// <param name="centerx"> Center x coordinate</param>
+	/// <param name="centery"> Center y coordinate</param>
+	/// <param name="x"> Current x coordinate in second octant</param>
+	/// <param name="y"> Current y coordinate in second octant</param>
+	/// <param name="lines"> If true draw lines from center otherwise draw only points </param>
+	void DrawSymmetrical(int centerx, int centery, int x, int y, bool lines);
 
 	///***
 	/// SCAN LINE ALGORITHM FUNCTIONS
