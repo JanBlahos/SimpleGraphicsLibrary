@@ -75,15 +75,17 @@ void Context::AddEdge(float x1, int y1, float z1, float x2, int y2, float z2) {
 	if (y1 == y2) {
 		return;
 	}
-	float slope =  x1 == x2 ? 0.0f : (static_cast<float> (y2 - y1)) / (x2 - x1);
-	slope = slope == 0.0f ? 0.0f :  1 / slope;
+	float slope =  x1 == x2 ? 0.0f : (x2 - x1) / (static_cast<float> (y2 - y1));
+	//slope = slope == 0.0f ? 0.0f :  1 / slope;
 
-	float z_slope = z1 == z2 ? 0.0f : (static_cast<float> (y2 - y1)) / (z2 - z1);
-	z_slope = z_slope == 0.0f ? 0.0f : 1 / slope;
+	float z_slope = z1 == z2 ? 0.0f : (z2 - z1) / (static_cast<float> (y2 - y1));
+	//z_slope = z_slope == 0.0f ? 0.0f : 1 / slope;
 
 	int y_start, y_end;
 	float x_start;
 	float z_start;
+	//std::cout << "Adding edge ( " << x1 << "," << y1 << "," << z1 << ") (" << x2 << "," << y2 << "," << z2 << ")" << std::endl;
+	//std::cout << "Z slope: " << z_slope << std::endl;
 	
 	if (y2 > y1) {
 		y_start = y2;
