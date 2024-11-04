@@ -27,7 +27,7 @@ void Context::BresenhamLine(int x1, int y1, int x2, int y2) {
 		int err = dx + dy;
 
 		while (true) {
-			SetPixel(x1, y1);
+			SetPixel(x1, y1, 0.0f);
 
 			if (x1 == x2 && y1 == y2) break;
 
@@ -62,6 +62,29 @@ void Context::BresenhamLine(int x1, int y1, int x2, int y2) {
 	}
 }
 
+void Context::BresenhamLine(int x1, int y1, float z1, int x2, int y2, float z2) {
+	if (!is_drawing) {
+		throw SGLInvalidOperationException("Cannot call this function while not drawing.");
+	}
+
+	if (std::abs(y2 - y1) < std::abs(x2 - x1)) {
+		if (x1 > x2) {
+			PlotLineDepthX(x2, y2, z2, x1, y1, z1);
+		}
+		else {
+			PlotLineDepthX(x1, y1, z1, x2, y2, z2);
+		}
+	}
+	else {
+		if (y1 > y2) {
+			PlotLineDepthY(x2, y2, z2, x1, y1, z1);
+		}
+		else {
+			PlotLineDepthY(x1, y1, z1, x2, y2, z2);
+		}
+	}
+};
+
 void Context::PlotLineX(int x1, int y1, int x2, int y2) {
 	int dx = x2 - x1;
 	int dy = y2 - y1;
@@ -76,7 +99,7 @@ void Context::PlotLineX(int x1, int y1, int x2, int y2) {
 	int two_dy = 2 * dy;
 
 	for (int x = x1; x <= x2; ++x) {
-		SetPixel(x, y);
+		SetPixel(x, y, 0.0f);
 		if (D > 0) {
 			y += yi;
 			D += two_dydx;
@@ -85,6 +108,36 @@ void Context::PlotLineX(int x1, int y1, int x2, int y2) {
 		}
 	}
 };
+
+void Context::PlotLineDepthX(int x1, int y1, float z1, int x2, int y2, float z2) {
+	int dx = x2 - x1;
+	int dy = y2 - y1;
+	int yi = 1;
+	if (dy < 0) {
+		yi = -1;
+		dy = -dy;
+	}
+	int D = (2 * dy) - dx;
+	int y = y1;
+	int two_dydx = 2 * (dy - dx);
+	int two_dy = 2 * dy;
+
+	float depth_step = (z2 - z1) / dx;
+	float current_z = z1;
+
+	for (int x = x1; x <= x2; ++x) {
+		SetPixel(x, y, current_z);
+		current_z += depth_step;
+
+		if (D > 0) {
+			y += yi;
+			D += two_dydx;
+		}
+		else {
+			D += two_dy;
+		}
+	}
+}
 
 void Context::PlotLineY(int x1, int y1, int x2, int y2) {
 	int dx = x2 - x1;
@@ -100,7 +153,7 @@ void Context::PlotLineY(int x1, int y1, int x2, int y2) {
 	int two_dx = 2 * dx;
 
 	for (int y = y1; y <= y2; ++y) {
-		SetPixel(x, y);
+		SetPixel(x, y, 0.0f);
 		if (D > 0) {
 			x += xi;
 			D += two_dxdy;
@@ -111,19 +164,49 @@ void Context::PlotLineY(int x1, int y1, int x2, int y2) {
 	}
 };
 
-void Context::DrawSymmetrical(int centerx, int centery, int x, int y, bool lines) {
+void Context::PlotLineDepthY(int x1, int y1, float z1, int x2, int y2, float z2) {
+	int dx = x2 - x1;
+	int dy = y2 - y1;
+	int xi = 1;
+	if (dx < 0) {
+		xi = -1;
+		dx = -dx;
+	}
+	int D = (2 * dx) - dy;
+	int x = x1;
+	int two_dxdy = 2 * (dx - dy);
+	int two_dx = 2 * dx;
+
+	float depth_step = (z2 - z1) / dy;
+	float current_z = z1;
+
+	for (int y = y1; y <= y2; ++y) {
+		SetPixel(x, y, current_z);
+		current_z += depth_step;
+
+		if (D > 0) {
+			x += xi;
+			D += two_dxdy;
+		}
+		else {
+			D += two_dx;
+		}
+	}
+}
+
+void Context::DrawSymmetrical(int centerx, int centery, int x, int y, bool lines, float depth) {
 	int points_x[8] = { x + centerx, x - centerx, x + centerx, x - centerx, x + centery, x - centery, x + centery, x - centery};
 	int points_y[8] = { y + centery, y + centery, y - centery, y - centery, y + centerx, y + centerx, y - centerx, y - centerx };
 	if (lines) {
 		//Draw lines between points with identical y
 		// to fill the circle (similiar idea as scan-line)
 		for (int i = 0; i < 7; i+= 2) {
-			BresenhamLine(points_x[i], points_y[i], points_x[i + 1], points_y[i + 1]);
+			BresenhamLine(points_x[i], points_y[i], depth, points_x[i + 1], points_y[i + 1], depth);
 		}
 	}
 	else {
 		for (int i = 0; i < 8; i++) {
-			SetPixel(points_x[i], points_y[i]);
+			SetPixel(points_x[i], points_y[i], depth);
 		}
 	}
 }
@@ -146,15 +229,11 @@ void Context::BresenhamCircle(float x, float y, float z, float radius) {
 	 
 	auto new_x = static_cast<int>(floor(vec_in_screen.x));
 	auto new_y = static_cast<int>(floor(vec_in_screen.y));
-
+	auto new_z = vec_in_screen.z;
 	if (filling_mode == SGL_POINT) {
-		SetPixel(new_x, new_y);
+		//SetPixel(new_x, new_y, new_z);
+		DrawPoint(new_x, new_y, new_z);
 	}
-
-	//TODO use the new_z for depth buffer
-	// hw02
-
-	//auto new_z = vec_in_screen.z;
 
 	// draw the first octant starting point
 	int current_x = 0;
@@ -166,7 +245,7 @@ void Context::BresenhamCircle(float x, float y, float z, float radius) {
 	int p = static_cast<int>(1 - new_radius);
 	bool lines = filling_mode == SGL_FILL;
 	while (current_x <= current_y) {
-		DrawSymmetrical(current_x, current_y, new_x, new_y, lines);
+		DrawSymmetrical(current_x, current_y, new_x, new_y, lines, new_z);
 		if (p > 0) {
 			p = p - dvey;
 			dvey = dvey - 2;
@@ -238,23 +317,35 @@ void Context::DrawEllipse(float x, float y, float z, float a, float b) {
 	if (is_drawing) {
 		throw SGLInvalidOperationException("Cannot call this function while drawing.");
 	}
+
 	auto draw_mode = SGL_LINE_STRIP;
 	switch (filling_mode) {
 	case SGL_FILL:
 		draw_mode = SGL_POLYGON;
 		break;
+	case SGL_LINE:
+		draw_mode = SGL_POLYGON;
+		break;
 	case SGL_POINT:
-		draw_mode = SGL_POINTS;
+		draw_mode = SGL_LINES;
 		break;
 	default:
 		break;
 	}
+
+	if (filling_mode == SGL_POINT) {
+		Matrix PVM = Matrix::Matmul(matrix_stack.GetProjectionMatrix(), matrix_stack.GetViewModelMatrix());
+		const Matrix& Vp = matrix_stack.GetViewport();
+		Vec4 transformed_center = VertexToScreen(Vec4{x, y, z, 1.0f}, PVM, Vp);
+		DrawPoint(transformed_center.x, transformed_center.y, transformed_center.z);
+	}
+
 	BeginDrawing(draw_mode);
 
-	/// Draw center if points or fill area mode are specified
-	if (draw_mode == SGL_POLYGON || draw_mode == SGL_POINTS) {
+	/// Buffer center if points or fill area mode are specified
+	/*if (draw_mode == SGL_POLYGON) {
 		BufferVertex4f(x, y, z, 1.0f);
-	}
+	}*/
 
 	for (int i = 0; i < NUM_SEGMENTS; i++) {
 		float theta = (2 * PI) * static_cast<float>(i) / (NUM_SEGMENTS - 1);

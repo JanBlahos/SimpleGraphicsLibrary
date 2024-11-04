@@ -16,14 +16,16 @@
 #define USE_INCREMENTAL_ERROR false
 #define MAX_VERTICES 100
 
-typedef struct edgebucket {
+typedef struct {
 	//int y_upper;
 	int y_lower;
 	float curr_x;
 	float slope;
+	float curr_z;
+	float depth_slope;
 }EdgeBucket;
 
-typedef struct edgebucketlist {
+typedef struct {
 	int count = 0;
 	EdgeBucket buckets[MAX_VERTICES];
 
@@ -39,6 +41,12 @@ typedef struct {
 	int x;
 	int y;
 } Point2D;
+
+typedef struct {
+	int x;
+	int y;
+	float z;
+} Point3D;
 
 /// <summary>
 /// Class handling matrix stacks and rasterization calls
@@ -176,7 +184,7 @@ public:
 	/// </summary>
 	/// <param name="x"> pixel x coordinate</param>
 	/// <param name="y"> pixel y coordinate</param>
-	void SetPixel(unsigned x, unsigned y);
+	void SetPixel(unsigned x, unsigned y, float depth);
 
 	/// <summary>
 	/// Functions as a getter
@@ -194,9 +202,11 @@ public:
 	/// </summary>
 	/// <param name="x1"> X coordinate of first point </param>
 	/// <param name="y1"> Y coordinate of the first point </param>
+	/// <param name="z1"> Z coordinate of the first point </param>
 	/// <param name="x2"> X coordinate of the second point </param>
 	/// <param name="y2"> Y coordinate of the second point </param>
-	void AddEdge(float x1, int y1, float x2, int y2);
+	/// <param name="z2"> Z coordinate of the second point </param>
+	void AddEdge(float x1, int y1, float z1, float x2, int y2, float z2);
 
 	/// <summary>
 	/// Fill the current polygon using the scan line algorithm
@@ -229,8 +239,8 @@ private:
 	std::vector<float> depth_buffer;
 
 	//the first specified point during Begin() End() sequence
-	Point2D very_first_point;
-	Point2D previous_point;
+	Point3D very_first_point;
+	Point3D previous_point;
 	unsigned num_buffered_vertices;
 
 	Matrix PVM_matrix;
@@ -244,14 +254,16 @@ private:
 	/// </summary>
 	/// <param name="x1"> Point x coordinate</param>
 	/// <param name="y1"> Point y coordinate</param>
-	void DrawPoint(int x1, int y1);
+	/// <param name="depth"> Depth for zbuffer</param>
+	void DrawPoint(int x1, int y1, float depth);
 
 	/// <summary>
 	/// Used to handle the drawing switch based on the current mode
 	/// </summary>
 	/// <param name="x1"> Vertex x coordinate</param>
 	/// <param name="y1"> Vertex y coordinate</param>
-	void DrawVertex(int x1, int y1);
+	/// <param name="depth"> Vertex depth for zbuffer</param>
+	void DrawVertex(int x1, int y1, float depth);
 
 	/// <summary>
 	/// Draws a line using the Bresenham algorithm
@@ -262,6 +274,18 @@ private:
 	/// <param name="y2">second point y coordinate</param>
 	/// <returns></returns>
 	void BresenhamLine(int x1, int y1, int x2, int y2);
+
+	/// <summary>
+	/// Draws a line using the Bresenham algorithm, interpolates depth
+	/// </summary>
+	/// <param name="x1">first point x coordinate</param>
+	/// <param name="y1">first point y coordinate</param>
+	/// <param name="z1">first point z coordinate</param>
+	/// <param name="x2">second point x coordinate</param>
+	/// <param name="y2">second point y coordinate</param>
+	/// <param name="z2">second point z coordinate</param>
+	/// <returns></returns>
+	void BresenhamLine(int x1, int y1, float z1, int x2, int y2, float z2);
 
 	/// <summary>
 	/// Draw line which has greater change
@@ -275,13 +299,37 @@ private:
 
 	/// <summary>
 	/// Draw line which has greater change
-	/// in x axis using the Bresenham algorithm
+	/// in x axis using the Bresenham algorithm, interpolates depth for pixels
+	/// </summary>
+	/// <param name="x1">Start point x coordinate. Maker sure that x1 < x2 </param>
+	/// <param name="y1"> Start point y coordinate.</param>
+	/// <param name="z1"> Start point z coordinate.</param>
+	/// <param name="x2"> End point x coordinate. Make sure that x2 > x1 </param>
+	/// <param name="y2"> End point y coordinate.</param>
+	/// <param name="z2"> End point z coordinate.</param>
+	void PlotLineDepthX(int x1, int y1, float z1, int x2, int y2, float z2);
+
+	/// <summary>
+	/// Draw line which has greater change
+	/// in y axis using the Bresenham algorithm
 	/// </summary>
 	/// <param name="x1">Start point x coordinate. Maker sure that x1 < x2 </param>
 	/// <param name="y1"> Start point y coordinate.</param>
 	/// <param name="x2"> End point x coordinate. </param>
 	/// <param name="y2"> End point y coordinate.  Make sure that y2 > y1</param>
 	void PlotLineY(int x1, int y1, int x2, int y2);
+
+	/// <summary>
+	/// Draw line which has greater change
+	/// in y axis using the Bresenham algorithm, interpolates depth for pixels
+	/// </summary>
+	/// <param name="x1">Start point x coordinate. Maker sure that x1 < x2 </param>
+	/// <param name="y1"> Start point y coordinate.</param>
+	/// <param name="z1"> Start point z coordinate.</param>
+	/// <param name="x2"> End point x coordinate. Make sure that x2 > x1 </param>
+	/// <param name="y2"> End point y coordinate.</param>
+	/// <param name="z2"> End point z coordinate.</param>
+	void PlotLineDepthY(int x1, int y1, float z1, int x2, int y2, float z2);
 
 	/// <summary>
 	/// Transforms given vertex to screen coords using PVM, Vp and perspective division
@@ -299,7 +347,8 @@ private:
 	/// <param name="x"> Current x coordinate in second octant</param>
 	/// <param name="y"> Current y coordinate in second octant</param>
 	/// <param name="lines"> If true draw lines from center otherwise draw only points </param>
-	void DrawSymmetrical(int centerx, int centery, int x, int y, bool lines);
+	/// <param name="depth"> circle z coordinate</param>
+	void DrawSymmetrical(int centerx, int centery, int x, int y, bool lines, float depth);
 
 	///***
 	/// SCAN LINE ALGORITHM FUNCTIONS
@@ -339,7 +388,9 @@ private:
 	/// <param name="y_lower"> Y coordinate of the edge end </param>
 	/// <param name="slope"> Edge slope in used to update the x coordinate</param>
 	/// <param name="bucket_list"> List in which to construct the new bucket</param>
-	void AddToBuckets(float start_x, int y_lower, float slope, EdgeBucketList& bucket_list);
+	/// <param name="start_z"> Bucket current z</param>
+	/// <param name="depth_slope"> Slope used to update the z coordinate</param>
+	void AddToBuckets(float start_x, int y_lower, float slope, EdgeBucketList& bucket_list, float start_z, float depth_slope);
 
 	/// <summary>
 	/// Remove buckets from the active buckets list

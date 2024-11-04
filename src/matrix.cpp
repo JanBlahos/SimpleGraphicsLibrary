@@ -341,9 +341,7 @@ Matrix Matrix::Viewport(int x, int y, int width, int height) {
 	mat(1, 1) = static_cast<float>(height_half);
 	mat(0, 3) = x + static_cast<float>(width_half);
 	mat(1, 3) = y + static_cast<float>(height_half);
-	//TODO the following calculations assume z = 0 
-	// and d = 1 in the Viewport calculation
-	// update this based on the depth buffer
+	//maps z from [-1,1] to [0,1]
 	mat(2, 2) = 1.0f / 2;
 	mat(2, 3) = 1.0f / 2;
 

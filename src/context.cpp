@@ -111,25 +111,35 @@ unsigned Context::Pixel2Index(unsigned x, unsigned y) {
 	return (y * win_width + x) * 3;
 }
 
-void Context::SetPixel(unsigned x, unsigned y) {
+void Context::SetPixel(unsigned x, unsigned y, float depth) {
 	//check if in window
 	//TODO can check for the whole primitive
 	if (x < win_width && y < win_height && x >= 0 && y >= 0) {
 		unsigned i = Pixel2Index(x, y);
-		color_buffer[i] = drawing_color.r;
-		color_buffer[i + 1] = drawing_color.g;
-		color_buffer[i + 2] = drawing_color.b;
+		unsigned j = i / 3;
+		if (depth_test) {
+			if (depth_buffer[j] > depth) {
+				depth_buffer[j] = depth;
+				color_buffer[i] = drawing_color.r;
+				color_buffer[i + 1] = drawing_color.g;
+				color_buffer[i + 2] = drawing_color.b;
+			}
+		} else {
+			color_buffer[i] = drawing_color.r;
+			color_buffer[i + 1] = drawing_color.g;
+			color_buffer[i + 2] = drawing_color.b;
+		}
 	}
 }
 
-void Context::DrawPoint(int x1, int y1) {
+void Context::DrawPoint(int x1, int y1, float depth) {
 	// no clear definition of even sized points e.g. 2x2
 	int start_x = x1 - point_size / 2;
 	int start_y = y1 - point_size / 2;
 	
 	for (int i = 0; i < point_size; ++i) {
 		for (int j = 0; j < point_size; ++j) {
-			SetPixel(start_x + i, start_y + j);
+			SetPixel(start_x + i, start_y + j, depth);
 		}
 	}
 }
