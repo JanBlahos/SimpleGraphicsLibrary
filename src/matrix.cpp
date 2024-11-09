@@ -388,10 +388,14 @@ Matrix Matrix::Frustum3D(float left, float right, float bottom, float top, float
 	// Create a perspective projection matrix
 	// for derivation see https://www.songho.ca/opengl/gl_projectionmatrix.html
 
-	Matrix mat = Orthographic3D(left, right, bottom, top, near, far);
+	Matrix mat = Eye(4);
+	auto side_difference = right - left;
+	auto top_difference = top - bottom;
 	auto plane_difference = far - near;
-	mat(0, 0) = mat(0, 0) * near;
-	mat(1, 1) = mat(1, 1) * near;
+	mat(0, 0) = near * (2 / side_difference);
+	mat(0, 2) = (right + left) / side_difference;
+	mat(1, 1) =  near * ( 2 / top_difference);
+	mat(1, 2) = (top + bottom) / top_difference;
 	mat(2, 2) = (-(far + near)) / plane_difference;
 	mat(2, 3) = (-2 * far * near) / plane_difference;
 	mat(3, 2) = -1;

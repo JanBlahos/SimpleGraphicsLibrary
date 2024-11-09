@@ -459,7 +459,7 @@ void sglFrustum(float left, float right, float bottom, float top, float near, fl
     MatrixStack& ms = cc->matrix_stack;
 
     TRY_HANDLE_EXCEPTIONS({
-        Matrix new_mat = Matrix::Matmul(ms.Top(), Matrix::Frustum3D(left, right, top, bottom, near, far));
+        Matrix new_mat = Matrix::Matmul(ms.Top(), Matrix::Frustum3D(left, right, bottom, top, near, far));
         ms.Pop();
         ms.Push(new_mat);
         })
