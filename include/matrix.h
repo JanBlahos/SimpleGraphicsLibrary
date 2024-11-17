@@ -99,6 +99,12 @@ public:
 	static Vec4 Cross3D(const Vec4& vec1, const Vec4& vec2);
 
 	/// <summary>
+	/// Calculates the euclidean distance in 3D to the other vector
+	/// </summary>
+	/// <param name="other"> Vector to calculate the distance to</param>
+	float Distance(const Vec4& other) const;
+
+	/// <summary>
 	/// Operator adding two vector together.
 	/// </summary>
 	/// <param name="vec1"></param>

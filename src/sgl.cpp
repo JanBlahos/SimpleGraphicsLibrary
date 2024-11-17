@@ -350,9 +350,6 @@ void sglLoadMatrix(const float *matrix) {
 }
 
 void sglMultMatrix(const float *matrix) {
-    //TODO currently shouldnt work as the data supplied as
-    //col1 ... col4, while our representation
-    //requires row1 ... row4
     Context* cc = cm.current_context;
     if (cc == nullptr) {
         setErrCode(SGL_INVALID_OPERATION);
@@ -551,9 +548,31 @@ void sglDisable(sglEEnableFlags cap) {
 // RayTracing oriented functions
 //---------------------------------------------------------------------------
 
-void sglBeginScene() {}
+void sglBeginScene() {
+    Context* cc = cm.current_context;
+    if (cc != nullptr) {
 
-void sglEndScene() {}
+        TRY_HANDLE_EXCEPTIONS({
+            cc->BeginScene();
+            })
+    }
+    else {
+        setErrCode(SGL_INVALID_OPERATION);
+    }
+}
+
+void sglEndScene() {
+    Context* cc = cm.current_context;
+    if (cc != nullptr) {
+
+        TRY_HANDLE_EXCEPTIONS({
+            cc->EndScene();
+            })
+    }
+    else {
+        setErrCode(SGL_INVALID_OPERATION);
+    }
+}
 
 void sglSphere(const float x,
                const float y,

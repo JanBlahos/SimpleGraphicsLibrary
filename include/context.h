@@ -37,16 +37,58 @@ typedef struct {
 	float b;
 } Color;
 
+//used for rasterization only
 typedef struct {
 	int x;
 	int y;
 } Point2D;
 
+//used for rasterization only
 typedef struct {
 	int x;
 	int y;
 	float z;
 } Point3D;
+
+//typedef struct {
+//	float x;
+//	float y;
+//	float z;
+//	float w;
+//} Point4D;
+
+typedef struct {
+	const float r;
+	const float g;
+	const float b;
+	const float kd;
+	const float ks;
+	const float shine;
+	const float T;
+	const float ior;
+} Material;
+
+typedef struct {
+	const float x;
+	const float y;
+	const float z;
+	const float r;
+	const float g;
+	const float b;
+} PointLight;
+
+typedef struct {
+	std::vector<Vec4> points; //TODO 3 points, no dynamic alloc
+	Material* mat;
+} Polygon;
+
+typedef struct {
+	const float x;
+	const float y;
+	const float z;
+	const float radius;
+	Material* mat;
+} Sphere;
 
 /// <summary>
 /// Class handling matrix stacks and rasterization calls
@@ -187,6 +229,15 @@ public:
 	void SetPixel(unsigned x, unsigned y, float depth);
 
 	/// <summary>
+	/// Sets pixel color in color buffer to chosen color, used for RT.
+	/// Does not check anything!
+	/// </summary>
+	/// <param name="x"> pixel x coordinate</param>
+	/// <param name="y"> pixel y coordinate</param>
+	/// <param name="color"> color to be drawn</param>
+	void SetPixelNoChecks(unsigned x, unsigned y, Color color);
+
+	/// <summary>
 	/// Functions as a getter
 	/// </summary>
 	/// <returns>Whether the library is executing a drawing sequence</returns>
@@ -212,6 +263,36 @@ public:
 	/// Fill the current polygon using the scan line algorithm
 	/// </summary>
 	void Fill();
+
+	/// <summary>
+	/// Begins the scene specification
+	/// </summary>
+	void BeginScene();
+
+	/// <summary>
+	/// Ends the scene specification
+	/// </summary>
+	void EndScene();
+
+	//TODO comments
+
+	void SetMaterial(const float r,
+		const float g,
+		const float b,
+		const float kd,
+		const float ks,
+		const float shine,
+		const float T,
+		const float ior);
+
+	void CreatePointLight(const float x,
+		const float y,
+		const float z,
+		const float r,
+		const float g,
+		const float b);
+
+	void RayTraceScene();
 
 	MatrixStack matrix_stack;
 private:
@@ -246,6 +327,15 @@ private:
 	Matrix PVM_matrix;
 	Matrix Vp_matrix;
 
+	bool is_setting_scene;
+	std::vector<PointLight> point_lights;
+	std::vector<Polygon> primitive_buffer;
+	std::vector<Sphere> sphere_buffer;
+
+	//a vector containing all specified materials,
+	// primitives get a pointer to their material
+	std::vector<Material> materials;
+
 	//returns index to the color buffer based off of screen coords
 	unsigned Pixel2Index(unsigned x, unsigned y);
 
@@ -256,6 +346,44 @@ private:
 	/// <param name="y1"> Point y coordinate</param>
 	/// <param name="depth"> Depth for zbuffer</param>
 	void DrawPoint(int x1, int y1, float depth);
+
+	/// <summary>
+	/// Computes pixel color by casting a ray and finding an intersection
+	/// with nearest object in the current scene
+	/// </summary>
+	/// <param name="ray_origin"> Where the ray is cast from</param>
+	/// <param name="ray_direction"> Normalized direction vector</param>
+	Color ComputePixelColor(Vec4 ray_origin, Vec4 ray_direction);
+
+	/// <summary>
+	/// Computes a surface normal for sphere
+	/// </summary>
+	/// <param name="sphere"> Input sphere for center coords</param>
+	/// <param name="intersection"> Intersection with ray</param>
+	Vec4 GetNormalizedNormal(const Sphere& sphere, const Vec4& intersection);
+
+	/// <summary>
+	/// Computes a surface normal for polygon
+	/// </summary>
+	/// <param name="polygon"> Input polygon</param>
+	Vec4 GetNormalizedNormal(const Polygon& polygon);
+
+	/// <summary>
+	/// Computes a ray-triangle intersection if it exists, returns
+	/// -1 in w component otherwise
+	/// </summary>
+	Vec4 RayTriangleIntersection(const Vec4& ray_origin, const Vec4& ray_direction, const Polygon& primitive);
+
+	/// <summary>
+	/// Computes a ray-sphere intersection if it exists, returns
+	/// -1 in w component otherwise
+	/// </summary>
+	Vec4 RaySphereIntersection(const Vec4& ray_origin, const Vec4& ray_direction, const Sphere& sphere);
+
+	/// <summary>
+	/// Calculates ligting for fragment in world coords
+	/// </summary>
+	Color ComputeLighting(const Vec4& intersection, const Material& material, const Vec4& surface_normal);
 
 	/// <summary>
 	/// Used to handle the drawing switch based on the current mode

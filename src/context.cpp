@@ -20,6 +20,7 @@ Context::Context(unsigned width, unsigned height) {
 	filling_mode = SGL_POINT;
 	max_y = 0;
 	min_y = height;
+	is_setting_scene = false;
 };
 
 Context::~Context() {
@@ -130,6 +131,13 @@ void Context::SetPixel(unsigned x, unsigned y, float depth) {
 			color_buffer[i + 2] = drawing_color.b;
 		}
 	}
+}
+
+void Context::SetPixelNoChecks(unsigned x, unsigned y, Color color) {
+	unsigned i = Pixel2Index(x, y);
+	color_buffer[i] = color.r;
+	color_buffer[i + 1] = color.g;
+	color_buffer[i + 2] = color.b;
 }
 
 void Context::DrawPoint(int x1, int y1, float depth) {

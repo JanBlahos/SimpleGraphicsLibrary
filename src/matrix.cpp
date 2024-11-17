@@ -42,8 +42,16 @@ Vec4 Vec4::Cross3D(const Vec4& vec1, const Vec4& vec2) {
 		vec1.y * vec2.z - (vec1.z * vec2.y),
 		vec1.z * vec2.x - (vec1.x * vec2.z),
 		vec1.x * vec2.y - (vec1.y * vec2.x),
-		1);
+		1.0f);
 	return result;
+}
+
+float Vec4::Distance(const Vec4& other) const {
+	float dx = x - other.x;
+	float dy = y - other.y;
+	float dz = z - other.z;
+
+	return std::sqrt(dx * dx + dy * dy + dz * dz);
 }
 
 Vec4 operator+ (Vec4 vec1, const Vec4& vec2) {
@@ -198,6 +206,7 @@ void Matrix::PrintMatrix(const Matrix& matrix) {
 	std::cout << "Finished printing matrix " << std::endl;
 }
 
+//note move constructor?
 Matrix Matrix::Matmul(const Matrix& left, const Matrix& right) {
 
 	Matrix result;
