@@ -45,6 +45,11 @@ public:
 	}
 
 	/// <summary>
+	/// Default ctor
+	/// </summary>
+	Vec4() = default;
+
+	/// <summary>
 	/// Subscript operators directly to the vector.
 	/// </summary>
 	float& operator() (unsigned position);

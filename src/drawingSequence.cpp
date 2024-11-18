@@ -31,8 +31,13 @@ void Context::BeginDrawing(sglEElementType mode) {
 	if (filling_mode == SGL_FILL) {
 		InitScanLine();
 	}
-	
-	//std::cout << "begin drawing\n";
+
+	if (is_setting_scene) {
+		//insert new polygon and assign last material
+		primitive_buffer.push_back(Polygon{});
+		primitive_buffer.back().mat = &materials.back();
+		next_vertex_idx = 0;
+	}
 };
 
 void Context::EndDrawing() {
@@ -136,9 +141,19 @@ void Context::DrawVertex(int x1, int y1, float depth) {
 	}
 }
 
+void Context::AddVertexToPolygon(const Vec4& v) {
+	auto& pts = primitive_buffer.back().points;
+	pts[next_vertex_idx] = v;
+	next_vertex_idx++;
+};
+
 void Context::BufferVertex4f(float x, float y, float z, float w) {
 	//tranform to screen
 	Vec4 v(x, y, z, w);
+	if (is_setting_scene) {
+		AddVertexToPolygon(v);
+		return;
+	}
 	Vec4 transformed_vec = Matrix::Matmul(PVM_matrix, v);
 	transformed_vec.PerspectiveDivide();
 	Vec4 vec_in_screen = Matrix::Matmul(Vp_matrix, transformed_vec);
@@ -150,12 +165,6 @@ void Context::BufferVertex4f(float x, float y, float z, float w) {
 	tx = static_cast<int>(std::floor(_tx));
 	ty = static_cast<int>(std::floor(_ty));
 	float depth = vec_in_screen.z;
-
-	/*if (depth >= 0.0f && depth <= 1.0f) {
-		std::cout << depth << "\n";
-	} else {
-		std::cout << "ERROR WRONG DEPTH" << depth << "\n";
-	}*/
 	
 	DrawVertex(tx, ty, depth);
 };

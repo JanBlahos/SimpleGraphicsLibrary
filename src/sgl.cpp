@@ -578,7 +578,9 @@ void sglSphere(const float x,
                const float y,
                const float z,
                const float radius)
-{}
+{
+    //TODO
+}
 
 void sglMaterial(const float r,
                  const float g,
@@ -588,7 +590,9 @@ void sglMaterial(const float r,
                  const float shine,
                  const float T,
                  const float ior)
-{}
+{
+    //TODO
+}
 
 void sglPointLight(const float x,
                    const float y,
@@ -596,9 +600,13 @@ void sglPointLight(const float x,
                    const float r,
                    const float g,
                    const float b)
-{}
+{
+    //TODO
+}
 
-void sglRayTraceScene() {}
+void sglRayTraceScene() {
+    //TODO
+}
 
 void sglRasterizeScene() {}
 

@@ -78,8 +78,10 @@ typedef struct {
 } PointLight;
 
 typedef struct {
-	std::vector<Vec4> points; //TODO 3 points, no dynamic alloc
 	Material* mat;
+	std::array<Vec4, 3> points; //triangles only, should use
+								// vector for general polygon
+	//std::vector<Vec4> points;
 } Polygon;
 
 typedef struct {
@@ -130,6 +132,11 @@ public:
 	/// End of the drawing sequence
 	/// </summary>
 	void EndDrawing();
+
+	/// <summary>
+	/// Adds vertex to last polygon when setting scene
+	/// </summary>
+	void AddVertexToPolygon(const Vec4& v);
 
 	/// <summary>
 	/// Buffers a 4 component vertex into vertex buffer
@@ -335,6 +342,9 @@ private:
 	//a vector containing all specified materials,
 	// primitives get a pointer to their material
 	std::vector<Material> materials;
+
+	//for buffering triangle vertices in RT
+	unsigned next_vertex_idx;
 
 	//returns index to the color buffer based off of screen coords
 	unsigned Pixel2Index(unsigned x, unsigned y);

@@ -26,14 +26,15 @@ void Vec4::normalize() {
 }
 
 Vec4 Vec4::operator* (float scalar) {
-	return Vec4{x*scalar, y*scalar, z*scalar, w*scalar};
+	//note doesnt multiply w
+	return Vec4{x*scalar, y*scalar, z*scalar, w};
 }
 
 Vec4& Vec4::operator*= (float scalar) {
 	x *= scalar;
 	y *= scalar;
 	z *= scalar;
-	w *= scalar;
+	//w *= scalar;
 	return *this;
 }
 
@@ -63,7 +64,7 @@ Vec4& Vec4::operator+= (const Vec4& other) {
 	x += other.x;
 	y += other.y;
 	z += other.z;
-	w += other.w;
+	//w += other.w;
 	return *this;
 }
 
@@ -76,7 +77,7 @@ Vec4& Vec4::operator-= (const Vec4& other) {
 	x -= other.x;
 	y -= other.y;
 	z -= other.z;
-	w -= other.w;
+	//w -= other.w;
 	return *this;
 }
 
