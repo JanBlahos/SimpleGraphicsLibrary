@@ -70,6 +70,10 @@ void Context::RayTraceScene() {
 	//sphere-only scenes
 	const Matrix& VM = matrix_stack.GetViewModelMatrix();
 	const Matrix& P = matrix_stack.GetProjectionMatrix();
+
+	std::cout << "viewmodel matrix:\n";
+	Matrix::PrintMatrix(VM);
+
 	PVM_matrix = Matrix::Matmul(P, VM);
 	Vp_matrix = matrix_stack.GetViewport();
 
@@ -78,6 +82,9 @@ void Context::RayTraceScene() {
 	Vec4 bottom_right = Vec4{ static_cast<float>(win_width), 0.0f, -1.0f, 1.0f };
 	Vec4 top_left = Vec4{ 0.0f, static_cast<float>(win_height), -1.0f, 1.0f };
 	Vec4 top_right = Vec4{ static_cast<float>(win_width), static_cast<float>(win_height), -1.0f, 1.0f };
+
+	const auto& sp = sphere_buffer.back();
+	std::cout << "Sphere xyz and radius:" << sp.x << " " << sp.y << " " << sp.z << " " << sp.radius << "\n";
 
 	std::cout << "corners of the screen in raster:\n";
 	Vec4::PrintVector(bottom_left);
@@ -96,15 +103,19 @@ void Context::RayTraceScene() {
 
 	//transform camera
 	//TODO dont use inverse projection?
-	Vec4 cam_t = Matrix::Matmul(PVM_inv, cam);
+	Matrix VM_inv;
+	Matrix::InvertMatrix(VM, VM_inv);
+	Vec4 cam_t = Matrix::Matmul(VM_inv, cam);
+	//Vec4 cam_t = Matrix::Matmul(PVM_inv, cam);
 
+	//TODO note: screen is behind camera
+
+	std::cout << "Camera xyzw: " << cam_t.x << " " << cam_t.y << " " << cam_t.z << " " << cam_t.w << "\n";
 
 	//Matrix::PrintMatrix(Vp_inv);
 	Matrix PVM_Vp_inv = Matrix::Matmul(PVM_inv, Vp_inv);
 
-	std::cout << "Camera xyzw: " << cam_t.x << " " << cam_t.y << " " << cam_t.z << " "<< cam_t.w << "\n";
-
-	//TODO check if points have z = -1 after P^-1 * Vp^-1
+	//TODO check corners after every transform
 
 	//tranform raster corners
 	Vec4 bl_t = Matrix::Matmul(PVM_Vp_inv, bottom_left); //tranformed bottom left
