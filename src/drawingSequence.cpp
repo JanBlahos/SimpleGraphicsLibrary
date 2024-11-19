@@ -28,7 +28,7 @@ void Context::BeginDrawing(sglEElementType mode) {
 
 	Vp_matrix = matrix_stack.GetViewport();
 
-	if (filling_mode == SGL_FILL) {
+	if (filling_mode == SGL_FILL && !is_setting_scene) {
 		InitScanLine();
 	}
 

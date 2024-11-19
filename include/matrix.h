@@ -79,7 +79,7 @@ public:
 	/// and the w component is ignored.
 	/// </summary>
 	/// <param name="scalar"></param>
-	Vec4 operator* (float scalar);
+	Vec4 operator* (float scalar) const;
 
 	/// <summary>
 	/// Multiply the vector elemets by a scalar, in-place.
@@ -139,6 +139,10 @@ public:
 	/// <returns></returns>
 	Vec4& operator-= (const Vec4& other);
 };
+
+inline Vec4 operator* (float scalar, const Vec4& vec) {
+	return vec * scalar;
+}
 
 /// <summary>
 /// Class representing general matrix of shape rows x cols.
@@ -308,6 +312,14 @@ public:
 	/// </summary>
 	/// <param name="matrix"></param>
 	static void PrintMatrix(const Matrix& matrix);
+
+	/// <summary>
+	/// Computes the inverse matrix if there is any
+	/// </summary>
+	/// <param name="matrix"> matrix to invert</param>
+	/// <param name="inverse_matrix"> matrix to be written to</param>
+	/// <returns></returns>
+	static bool InvertMatrix(const Matrix& matrix, Matrix& inverse_matrix);
 
 
 	static Matrix RotateAroundCenter(float x, float y, float angle);

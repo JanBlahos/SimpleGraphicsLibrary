@@ -579,7 +579,16 @@ void sglSphere(const float x,
                const float z,
                const float radius)
 {
-    //TODO
+    Context* cc = cm.current_context;
+    if (cc != nullptr) {
+
+        TRY_HANDLE_EXCEPTIONS({
+            cc->CreateSphere(x, y, z, radius);
+            })
+    }
+    else {
+        setErrCode(SGL_INVALID_OPERATION);
+    }
 }
 
 void sglMaterial(const float r,
@@ -591,7 +600,16 @@ void sglMaterial(const float r,
                  const float T,
                  const float ior)
 {
-    //TODO
+    Context* cc = cm.current_context;
+    if (cc != nullptr) {
+
+        TRY_HANDLE_EXCEPTIONS({
+            cc->SetMaterial(r, g, b, kd, ks, shine, T, ior);
+            })
+    }
+    else {
+        setErrCode(SGL_INVALID_OPERATION);
+    }
 }
 
 void sglPointLight(const float x,
@@ -601,11 +619,29 @@ void sglPointLight(const float x,
                    const float g,
                    const float b)
 {
-    //TODO
+    Context* cc = cm.current_context;
+    if (cc != nullptr) {
+
+        TRY_HANDLE_EXCEPTIONS({
+            cc->CreatePointLight(x, y, z, r, g, b);
+            })
+    }
+    else {
+        setErrCode(SGL_INVALID_OPERATION);
+    }
 }
 
 void sglRayTraceScene() {
-    //TODO
+    Context* cc = cm.current_context;
+    if (cc != nullptr) {
+
+        TRY_HANDLE_EXCEPTIONS({
+            cc->RayTraceScene();
+            })
+    }
+    else {
+        setErrCode(SGL_INVALID_OPERATION);
+    }
 }
 
 void sglRasterizeScene() {}

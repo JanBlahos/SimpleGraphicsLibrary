@@ -25,7 +25,7 @@ void Vec4::normalize() {
 	z = z / norm;
 }
 
-Vec4 Vec4::operator* (float scalar) {
+Vec4 Vec4::operator* (float scalar) const {
 	//note doesnt multiply w
 	return Vec4{x*scalar, y*scalar, z*scalar, w};
 }
@@ -86,8 +86,8 @@ void Vec4::PrintVector(const Vec4& vec) {
 	for (unsigned i = 0; i < 4; i++) {
 		std::cout << vec(i) << " ";
 	}
-	std::cout << std::endl;
-	std::cout << "Finished printing vector" << std::endl;
+	std::cout << "\n";
+	//std::cout << "Finished printing vector" << std::endl;
 }
 
 
@@ -198,9 +198,9 @@ const std::array<float, 16>& Matrix::GetData() const {
 void Matrix::PrintMatrix(const Matrix& matrix) {
 	auto dims = matrix.GetDimensions();
 	std::cout << "Matrix dims " << dims.first << "x" << dims.second << std::endl;
-	for (unsigned i = 0; i < dims.second; i++) {
-		for (unsigned j = 0; j < dims.first; j++) {
-			std::cout << matrix(j, i) << " ";
+	for (unsigned i = 0; i < dims.first; i++) {
+		for (unsigned j = 0; j < dims.second; j++) {
+			std::cout << matrix(i, j) << " ";
 		}
 		std::cout << std::endl;
 	}
@@ -357,6 +357,9 @@ Matrix Matrix::Viewport(int x, int y, int width, int height) {
 
 	mat(3, 3) = 1.0f;
 
+	//std::cout << "Setting viewport\n";
+	//Matrix::PrintMatrix(mat);
+
 	return mat;
 }
 
@@ -411,5 +414,141 @@ Matrix Matrix::Frustum3D(float left, float right, float bottom, float top, float
 	mat(3, 2) = -1;
 	mat(3, 3) = 0;
 	return mat;
-
 }
+
+bool Matrix::InvertMatrix(const Matrix& matrix, Matrix& inverse_matrix) {
+	const auto& m = matrix.GetData();
+
+	//implementation as in GLU library
+
+	double inv[16], det;
+	int i;
+
+	inv[0] = m[5] * m[10] * m[15] -
+		m[5] * m[11] * m[14] -
+		m[9] * m[6] * m[15] +
+		m[9] * m[7] * m[14] +
+		m[13] * m[6] * m[11] -
+		m[13] * m[7] * m[10];
+
+	inv[4] = -m[4] * m[10] * m[15] +
+		m[4] * m[11] * m[14] +
+		m[8] * m[6] * m[15] -
+		m[8] * m[7] * m[14] -
+		m[12] * m[6] * m[11] +
+		m[12] * m[7] * m[10];
+
+	inv[8] = m[4] * m[9] * m[15] -
+		m[4] * m[11] * m[13] -
+		m[8] * m[5] * m[15] +
+		m[8] * m[7] * m[13] +
+		m[12] * m[5] * m[11] -
+		m[12] * m[7] * m[9];
+
+	inv[12] = -m[4] * m[9] * m[14] +
+		m[4] * m[10] * m[13] +
+		m[8] * m[5] * m[14] -
+		m[8] * m[6] * m[13] -
+		m[12] * m[5] * m[10] +
+		m[12] * m[6] * m[9];
+
+	inv[1] = -m[1] * m[10] * m[15] +
+		m[1] * m[11] * m[14] +
+		m[9] * m[2] * m[15] -
+		m[9] * m[3] * m[14] -
+		m[13] * m[2] * m[11] +
+		m[13] * m[3] * m[10];
+
+	inv[5] = m[0] * m[10] * m[15] -
+		m[0] * m[11] * m[14] -
+		m[8] * m[2] * m[15] +
+		m[8] * m[3] * m[14] +
+		m[12] * m[2] * m[11] -
+		m[12] * m[3] * m[10];
+
+	inv[9] = -m[0] * m[9] * m[15] +
+		m[0] * m[11] * m[13] +
+		m[8] * m[1] * m[15] -
+		m[8] * m[3] * m[13] -
+		m[12] * m[1] * m[11] +
+		m[12] * m[3] * m[9];
+
+	inv[13] = m[0] * m[9] * m[14] -
+		m[0] * m[10] * m[13] -
+		m[8] * m[1] * m[14] +
+		m[8] * m[2] * m[13] +
+		m[12] * m[1] * m[10] -
+		m[12] * m[2] * m[9];
+
+	inv[2] = m[1] * m[6] * m[15] -
+		m[1] * m[7] * m[14] -
+		m[5] * m[2] * m[15] +
+		m[5] * m[3] * m[14] +
+		m[13] * m[2] * m[7] -
+		m[13] * m[3] * m[6];
+
+	inv[6] = -m[0] * m[6] * m[15] +
+		m[0] * m[7] * m[14] +
+		m[4] * m[2] * m[15] -
+		m[4] * m[3] * m[14] -
+		m[12] * m[2] * m[7] +
+		m[12] * m[3] * m[6];
+
+	inv[10] = m[0] * m[5] * m[15] -
+		m[0] * m[7] * m[13] -
+		m[4] * m[1] * m[15] +
+		m[4] * m[3] * m[13] +
+		m[12] * m[1] * m[7] -
+		m[12] * m[3] * m[5];
+
+	inv[14] = -m[0] * m[5] * m[14] +
+		m[0] * m[6] * m[13] +
+		m[4] * m[1] * m[14] -
+		m[4] * m[2] * m[13] -
+		m[12] * m[1] * m[6] +
+		m[12] * m[2] * m[5];
+
+	inv[3] = -m[1] * m[6] * m[11] +
+		m[1] * m[7] * m[10] +
+		m[5] * m[2] * m[11] -
+		m[5] * m[3] * m[10] -
+		m[9] * m[2] * m[7] +
+		m[9] * m[3] * m[6];
+
+	inv[7] = m[0] * m[6] * m[11] -
+		m[0] * m[7] * m[10] -
+		m[4] * m[2] * m[11] +
+		m[4] * m[3] * m[10] +
+		m[8] * m[2] * m[7] -
+		m[8] * m[3] * m[6];
+
+	inv[11] = -m[0] * m[5] * m[11] +
+		m[0] * m[7] * m[9] +
+		m[4] * m[1] * m[11] -
+		m[4] * m[3] * m[9] -
+		m[8] * m[1] * m[7] +
+		m[8] * m[3] * m[5];
+
+	inv[15] = m[0] * m[5] * m[10] -
+		m[0] * m[6] * m[9] -
+		m[4] * m[1] * m[10] +
+		m[4] * m[2] * m[9] +
+		m[8] * m[1] * m[6] -
+		m[8] * m[2] * m[5];
+
+	det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
+
+	if (det == 0)
+		return false;
+
+	det = 1.0 / det;
+
+	std::array<float, 16> new_data;
+
+	for (i = 0; i < 16; i++)
+		new_data[i] = inv[i] * det;
+
+	inverse_matrix = Matrix(4, 4, new_data);
+
+	return true;
+};

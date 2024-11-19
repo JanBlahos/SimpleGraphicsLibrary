@@ -281,8 +281,9 @@ public:
 	/// </summary>
 	void EndScene();
 
-	//TODO comments
-
+	/// <summary>
+	/// Defines a new material
+	/// </summary>
 	void SetMaterial(const float r,
 		const float g,
 		const float b,
@@ -292,6 +293,9 @@ public:
 		const float T,
 		const float ior);
 
+	/// <summary>
+	/// Creates a pointlight
+	/// </summary>
 	void CreatePointLight(const float x,
 		const float y,
 		const float z,
@@ -299,6 +303,17 @@ public:
 		const float g,
 		const float b);
 
+	/// <summary>
+	/// Adds a sphere to the sphere buffer
+	/// </summary>
+	void Context::CreateSphere(const float x,
+		const float y,
+		const float z,
+		const float radius);
+
+	/// <summary>
+	/// Computes the image after setting the scene
+	/// </summary>
 	void RayTraceScene();
 
 	MatrixStack matrix_stack;
@@ -377,6 +392,21 @@ private:
 	/// </summary>
 	/// <param name="polygon"> Input polygon</param>
 	Vec4 GetNormalizedNormal(const Polygon& polygon);
+
+	/// <summary>
+	/// Bilinearly interpolates, starting between bl, br and tl, tr
+	/// </summary>
+	/// <param name="bl"></param>
+	/// <param name="br"></param>
+	/// <param name="tl"></param>
+	/// <param name="tr"></param>
+	/// <param name="u"></param>
+	/// <param name="v"></param>
+	/// <returns></returns>
+	Vec4 BilinearInterpolation(
+		const Vec4& bl, const Vec4& br,
+		const Vec4& tl, const Vec4& tr,
+		float u, float v);
 
 	/// <summary>
 	/// Computes a ray-triangle intersection if it exists, returns
