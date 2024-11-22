@@ -74,12 +74,6 @@ void Context::RayTraceScene() {
 	PVM_matrix = Matrix::Matmul(P, VM);
 	Vp_matrix = matrix_stack.GetViewport();
 
-	
-	/*Vec4 bottom_left = Vec4{ 0.0f, static_cast<float>(win_height), -1.0f, 1.0f };
-	Vec4 bottom_right = Vec4{ static_cast<float>(win_width), static_cast<float>(win_height), -1.0f, 1.0f };
-	Vec4 top_left = Vec4{ 0.0f, 0.0f, -1.0f, 1.0f };
-	Vec4 top_right = Vec4{ static_cast<float>(win_width), 0.0f, -1.0f, 1.0f };*/
-
 	Vec4 bottom_left = Vec4{ 0.0f, 0.0f, -1.0f, 1.0f };
 	Vec4 bottom_right = Vec4{ static_cast<float>(win_width), 0.0f, -1.0f, 1.0f };
 	Vec4 top_left = Vec4{ 0.0f, static_cast<float>(win_height), -1.0f, 1.0f };
@@ -108,12 +102,6 @@ void Context::RayTraceScene() {
 	br_t.PerspectiveDivide();
 	tl_t.PerspectiveDivide();
 	tr_t.PerspectiveDivide();
-
-	/*std::cout << "corners of the screen in world:\n";
-	std::cout << "Bottom left: " << bl_t.x << " " << bl_t.y << "\n";
-	std::cout << "Bottom right: " << br_t.x << " " << br_t.y << "\n";
-	std::cout << "Top left: " << tl_t.x << " " << tl_t.y << "\n";
-	std::cout << "Top right: " << tr_t.x << " " << tr_t.y << "\n";*/
 
 	Vec4 ray_origin = cam_t;
 	Vec4 ray_direction = Vec4{ 0.0f, 0.0f, 0.0f, 0.0f };
@@ -184,7 +172,6 @@ Color Context::ComputePixelColor(Vec4 ray_origin, Vec4 ray_direction) {
 
 	if (nearest_sphere == -1 && nearest_polygon == -1) { //no intersection
 		//return invalid color
-		//fragment_color = clear_color;
 		fragment_color = Color{-1.0f, -1.0f, -1.0f};
 
 	} else if (nearest_polygon == -1) { //sphere
