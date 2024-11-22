@@ -71,8 +71,8 @@ void Context::RayTraceScene() {
 	const Matrix& VM = matrix_stack.GetViewModelMatrix();
 	const Matrix& P = matrix_stack.GetProjectionMatrix();
 
-	std::cout << "viewmodel matrix:\n";
-	Matrix::PrintMatrix(VM);
+	//std::cout << "viewmodel matrix:\n";
+	//Matrix::PrintMatrix(VM);
 
 	PVM_matrix = Matrix::Matmul(P, VM);
 	Vp_matrix = matrix_stack.GetViewport();
@@ -84,7 +84,7 @@ void Context::RayTraceScene() {
 	Vec4 top_right = Vec4{ static_cast<float>(win_width), static_cast<float>(win_height), -1.0f, 1.0f };
 
 	const auto& sp = sphere_buffer.back();
-	std::cout << "Sphere xyz and radius:" << sp.x << " " << sp.y << " " << sp.z << " " << sp.radius << "\n";
+	//std::cout << "Sphere xyz and radius:" << sp.x << " " << sp.y << " " << sp.z << " " << sp.radius << "\n";
 
 	std::cout << "corners of the screen in raster:\n";
 	Vec4::PrintVector(bottom_left);
@@ -98,8 +98,17 @@ void Context::RayTraceScene() {
 	//Matrix::PrintMatrix(Vp_matrix);
 
 	Matrix PVM_inv, Vp_inv;
+	std::cout << "VM_matrix" << std::endl;
+	Matrix::PrintMatrix(VM); 
 	Matrix::InvertMatrix(PVM_matrix, PVM_inv);
+	/*std::cout << "PVM inversion" << std::endl;
+	Matrix::PrintMatrix(PVM_inv);*/
 	Matrix::InvertMatrix(Vp_matrix, Vp_inv);
+	/*std::cout << "VP_matrix: " << std::endl;
+	Matrix::PrintMatrix(Vp_matrix);
+	std::cout << "Vp_inversion: " << std::endl;
+	Matrix::PrintMatrix(Vp_inv);*/
+
 
 	//transform camera
 	//TODO dont use inverse projection?
@@ -107,21 +116,26 @@ void Context::RayTraceScene() {
 	Matrix::InvertMatrix(VM, VM_inv);
 	Vec4 cam_t = Matrix::Matmul(VM_inv, cam);
 	//Vec4 cam_t = Matrix::Matmul(PVM_inv, cam);
+	cam_t.PerspectiveDivide();
 
-	//TODO note: screen is behind camera
+	Matrix PVM_Vp_inv = Matrix::Matmul(PVM_inv, Vp_inv);
 
 	std::cout << "Camera xyzw: " << cam_t.x << " " << cam_t.y << " " << cam_t.z << " " << cam_t.w << "\n";
 
-	//Matrix::PrintMatrix(Vp_inv);
-	Matrix PVM_Vp_inv = Matrix::Matmul(PVM_inv, Vp_inv);
-
-	//TODO check corners after every transform
 
 	//tranform raster corners
 	Vec4 bl_t = Matrix::Matmul(PVM_Vp_inv, bottom_left); //tranformed bottom left
-	Vec4 br_t = Matrix::Matmul(PVM_Vp_inv, bottom_right);; //tranformed bottom right
+	bl_t.PerspectiveDivide();
+	//bl_t.z -= 1;
+	Vec4 br_t = Matrix::Matmul(PVM_Vp_inv, bottom_right); //tranformed bottom right
+	br_t.PerspectiveDivide();
+	//br_t.z -= 1;
 	Vec4 tl_t = Matrix::Matmul(PVM_Vp_inv, top_left);; //tranformed top left
+	tl_t.PerspectiveDivide();
+	//tl_t.z -= 1;
 	Vec4 tr_t = Matrix::Matmul(PVM_Vp_inv, top_right);; //transformed top right
+	tr_t.PerspectiveDivide();
+	//tr_t.z -= 1;
 
 	std::cout << "corners of the screen in world:\n";
 	Vec4::PrintVector(bl_t);
@@ -197,6 +211,7 @@ Color Context::ComputePixelColor(Vec4 ray_origin, Vec4 ray_direction) {
 
 	if (nearest_sphere == -1 && nearest_polygon == -1) { //no intersection
 		//return invalid color
+		//fragment_color = clear_color;
 		fragment_color = Color{-1.0f, -1.0f, -1.0f};
 
 	} else if (nearest_polygon == -1) { //sphere
@@ -228,11 +243,12 @@ Vec4 Context::GetNormalizedNormal(const Polygon& polygon) {
 
 	//flip if facing away, no polygon orientation defined (ccw/cw)
 	Vec4 dir_towards_camera = Vec4{ 0.0f, 0.0f, 1.0f, 0.0f };
+	normal.normalize();
 	if (normal.dot(dir_towards_camera) < 0) {
 		normal = Vec4{-normal.x, -normal.y, -normal.z, normal.w};
 	}
 
-	normal.normalize();
+	//normal.normalize();
 	return normal;
 }
 
@@ -243,20 +259,27 @@ Vec4 Context::RayTriangleIntersection(const Vec4& ray_origin, const Vec4& ray_di
 	// https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
 
 	// 1.0f minus the next representable value, essentially this is just 0
+	// used because of float numerical inprescision
 	constexpr float epsilon = std::numeric_limits<float>::epsilon();
 
 	Vec4 e1 = primitive.points[1] - primitive.points[0];
 	Vec4 e2 = primitive.points[2] - primitive.points[0];
 	Vec4 ray_cross_e2 = Vec4::Cross3D(ray_direction, e2);
 
-	float det = e1.dot(e2);
+	// these represent determinants of the
+	// linear equation system
+	// because Moller-Trumbore algorithm
+	// uses Cramer´s rule to find solutions
 
-	if (det > -epsilon && det < epsilon) { // parallel
+	float det = e1.dot(ray_cross_e2);
+
+	if (std::abs(det) < epsilon) { // parallel
 		return failed_intersection;
 	}
 
 	float inv_det = 1.0f / det;
 	Vec4 s = ray_origin - primitive.points[0];
+	// the u parameter representing the coefficent of edge 1
 	float u = inv_det * s.dot(ray_cross_e2);
 
 	if ((u < 0 && std::abs(u) > epsilon) || (u > 1 && std::abs(u - 1) > epsilon)) {
@@ -264,12 +287,14 @@ Vec4 Context::RayTriangleIntersection(const Vec4& ray_origin, const Vec4& ray_di
 	}
 
 	Vec4 s_cross_e1 = Vec4::Cross3D(s, e1);
+	// the v parameter representing the coefficient of edge 2
+	// these two need to be a convex combination of the edges to be within the triangle
 	float v = inv_det * ray_direction.dot(s_cross_e1);
 
 	if ((v < 0 && std::abs(v) > epsilon) || (u + v > 1 && std::abs(u + v - 1) > epsilon)) {
 		return failed_intersection;
 	}
-
+	// t parameter representing the coefficient of ray direction
 	float t = inv_det * e2.dot(s_cross_e1);
 
 	if (t <= epsilon) {
