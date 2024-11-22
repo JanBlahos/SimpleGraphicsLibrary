@@ -310,28 +310,28 @@ Vec4 Context::RaySphereIntersection(const Vec4& ray_origin, const Vec4& ray_dire
 
 Color Context::ComputeLighting(const Vec4& ray_origin, const Vec4& intersection, const Material& material, const Vec4& surface_normal) {
 
-	//Color color = Color{ material.r, material.g, material.b };
-	Color color = Color{ 0, 0, 0};
-
-	//TODO Phong, utilize points_lights vector
+	//Phong
+	Color color = Color{ 0.0f, 0.0f, 0.0f };
+	const Vec4& N = surface_normal;
+	
 	for (auto& light : point_lights) {
 		//diffuse reflection
 		Vec4 light_pos = Vec4{ light.x, light.y, light.z, 1.0f };
 		Vec4 L = light_pos - intersection;
 		L.normalize();
-		float cos_alpha = L.dot(surface_normal);
+		float cos_alpha = L.dot(N);
 		cos_alpha = std::max(cos_alpha, 0.0f);
 
 		//specular reflection
-		Vec4 R = (2 * cos_alpha * surface_normal) - L;
+		Vec4 R = (2 * cos_alpha * N) - L;
 		Vec4 E = ray_origin - intersection;
 		E.normalize();
-		float cos_beta_sh = powf(std::max(R.dot(E), 0.0f), material.shine);
+		float cos_beta_sh = std::powf(std::max(R.dot(E), 0.0f), material.shine);
 
 		//combine the components together
-		color.r += (light.r * material.r * material.kd * cos_alpha) + (light.r * material.r * material.ks * cos_beta_sh);
-		color.g += (light.g * material.g * material.kd * cos_alpha) + (light.g * material.g * material.ks * cos_beta_sh);
-		color.b += (light.b * material.b * material.kd * cos_alpha) + (light.b * material.b * material.ks * cos_beta_sh);
+		color.r += (light.r * material.r * material.kd * cos_alpha) + (light.r * material.ks * cos_beta_sh);
+		color.g += (light.g * material.g * material.kd * cos_alpha) + (light.g * material.ks * cos_beta_sh);
+		color.b += (light.b * material.b * material.kd * cos_alpha) + (light.b * material.ks * cos_beta_sh);
 	}
 
 	return color;
