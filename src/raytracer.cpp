@@ -1,5 +1,6 @@
 #include "context.h"
 #include "exceptions.h"
+#include "threadpool.h"
 #include <iostream>
 
 void Context::BeginScene() {
@@ -133,7 +134,7 @@ Color Context::ComputePixelColor(Vec4 ray_origin, Vec4 ray_direction) {
 	Vec4 nearest_intersection = Vec4{ 0.0f, 0.0f, 0.0f, 0.0f };
 
 	for (int i = 0; i < sphere_buffer.size(); ++i) {
-		auto& sphere = sphere_buffer[i];
+		const auto& sphere = sphere_buffer[i];
 
 		Vec4 intersection = RaySphereIntersection(ray_origin, ray_direction, sphere);
 		if (intersection.w == -1) continue;
@@ -148,7 +149,7 @@ Color Context::ComputePixelColor(Vec4 ray_origin, Vec4 ray_direction) {
 	}
 
 	for (int i = 0; i < primitive_buffer.size(); ++i) {
-		auto& primitive = primitive_buffer[i];
+		const auto& primitive = primitive_buffer[i];
 		
 		if (primitive.points.size() != 3) {
 			throw SGLInvalidOperationException("Primitives other than triangles"
