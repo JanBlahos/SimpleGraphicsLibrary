@@ -71,76 +71,49 @@ void Context::RayTraceScene() {
 	const Matrix& VM = matrix_stack.GetViewModelMatrix();
 	const Matrix& P = matrix_stack.GetProjectionMatrix();
 
-	//std::cout << "viewmodel matrix:\n";
-	//Matrix::PrintMatrix(VM);
-
 	PVM_matrix = Matrix::Matmul(P, VM);
 	Vp_matrix = matrix_stack.GetViewport();
 
-	//TODO maybe top left should be (0, 0)
-	Vec4 bottom_left = Vec4{0.0f, 0.0f, -1.0f, 1.0f};
+	
+	/*Vec4 bottom_left = Vec4{ 0.0f, static_cast<float>(win_height), -1.0f, 1.0f };
+	Vec4 bottom_right = Vec4{ static_cast<float>(win_width), static_cast<float>(win_height), -1.0f, 1.0f };
+	Vec4 top_left = Vec4{ 0.0f, 0.0f, -1.0f, 1.0f };
+	Vec4 top_right = Vec4{ static_cast<float>(win_width), 0.0f, -1.0f, 1.0f };*/
+
+	Vec4 bottom_left = Vec4{ 0.0f, 0.0f, -1.0f, 1.0f };
 	Vec4 bottom_right = Vec4{ static_cast<float>(win_width), 0.0f, -1.0f, 1.0f };
 	Vec4 top_left = Vec4{ 0.0f, static_cast<float>(win_height), -1.0f, 1.0f };
 	Vec4 top_right = Vec4{ static_cast<float>(win_width), static_cast<float>(win_height), -1.0f, 1.0f };
 
-	//const auto& sp = sphere_buffer.back();
-	//std::cout << "Sphere xyz and radius:" << sp.x << " " << sp.y << " " << sp.z << " " << sp.radius << "\n";
-
-	std::cout << "corners of the screen in raster:\n";
-	Vec4::PrintVector(bottom_left);
-	Vec4::PrintVector(bottom_right);
-	Vec4::PrintVector(top_left);
-	Vec4::PrintVector(top_right);
-
-	//TODO camera xyz wrong?
 	Vec4 cam = Vec4{0.0f, 0.0f, 0.0f, 1.0f};
 
-	//Matrix::PrintMatrix(Vp_matrix);
-
 	Matrix PVM_inv, Vp_inv;
-	std::cout << "VM_matrix" << std::endl;
-	Matrix::PrintMatrix(VM); 
 	Matrix::InvertMatrix(PVM_matrix, PVM_inv);
-	/*std::cout << "PVM inversion" << std::endl;
-	Matrix::PrintMatrix(PVM_inv);*/
 	Matrix::InvertMatrix(Vp_matrix, Vp_inv);
-	/*std::cout << "VP_matrix: " << std::endl;
-	Matrix::PrintMatrix(Vp_matrix);
-	std::cout << "Vp_inversion: " << std::endl;
-	Matrix::PrintMatrix(Vp_inv);*/
-
 
 	//transform camera
-	//TODO dont use inverse projection?
 	Matrix VM_inv;
 	Matrix::InvertMatrix(VM, VM_inv);
 	Vec4 cam_t = Matrix::Matmul(VM_inv, cam);
-	//Vec4 cam_t = Matrix::Matmul(PVM_inv, cam);
 
 	Matrix PVM_Vp_inv = Matrix::Matmul(PVM_inv, Vp_inv);
 
-	std::cout << "Camera xyzw: " << cam_t.x << " " << cam_t.y << " " << cam_t.z << " " << cam_t.w << "\n";
-
-
 	//tranform raster corners
 	Vec4 bl_t = Matrix::Matmul(PVM_Vp_inv, bottom_left); //tranformed bottom left
-	bl_t.PerspectiveDivide();
-	//bl_t.z -= 1;
 	Vec4 br_t = Matrix::Matmul(PVM_Vp_inv, bottom_right); //tranformed bottom right
-	br_t.PerspectiveDivide();
-	//br_t.z -= 1;
 	Vec4 tl_t = Matrix::Matmul(PVM_Vp_inv, top_left);; //tranformed top left
-	tl_t.PerspectiveDivide();
-	//tl_t.z -= 1;
 	Vec4 tr_t = Matrix::Matmul(PVM_Vp_inv, top_right);; //transformed top right
-	tr_t.PerspectiveDivide();
-	//tr_t.z -= 1;
 
-	std::cout << "corners of the screen in world:\n";
-	Vec4::PrintVector(bl_t);
-	Vec4::PrintVector(br_t);
-	Vec4::PrintVector(tl_t);
-	Vec4::PrintVector(tr_t);
+	bl_t.PerspectiveDivide();
+	br_t.PerspectiveDivide();
+	tl_t.PerspectiveDivide();
+	tr_t.PerspectiveDivide();
+
+	/*std::cout << "corners of the screen in world:\n";
+	std::cout << "Bottom left: " << bl_t.x << " " << bl_t.y << "\n";
+	std::cout << "Bottom right: " << br_t.x << " " << br_t.y << "\n";
+	std::cout << "Top left: " << tl_t.x << " " << tl_t.y << "\n";
+	std::cout << "Top right: " << tr_t.x << " " << tr_t.y << "\n";*/
 
 	Vec4 ray_origin = cam_t;
 	Vec4 ray_direction = Vec4{ 0.0f, 0.0f, 0.0f, 0.0f };
@@ -152,15 +125,14 @@ void Context::RayTraceScene() {
 
 			Vec4 pixel_in_world = BilinearInterpolation(bl_t, br_t, tl_t, tr_t, u, v);
 			ray_direction = Vec4{ pixel_in_world.x - ray_origin.x, pixel_in_world.y - ray_origin.y, pixel_in_world.z - ray_origin.z, 0.0f };
-			//std::cout << "Ray direction\n";
-			//Vec4::PrintVector(ray_direction);
 			ray_direction.normalize();
 
 			Color color = ComputePixelColor(ray_origin, ray_direction);
 
 			if (color.r == -1.0f) continue;
 
-			SetPixelNoChecks(r, c, color);
+			//setpixel uses x, y not row column, so column becomes x
+			SetPixelNoChecks(c, r, color);
 		}
 	}
 };
@@ -243,9 +215,6 @@ Vec4 Context::GetNormalizedNormal(const Polygon& polygon, const Vec4& ray_origin
 	Vec4 normal = Vec4::Cross3D(p1 - p0, p1 - p2);
 
 	//flip if facing away, no polygon orientation defined (ccw/cw)
-	// dir towards camera is (0, 0, 1, 0) multiplied by VM inversion
-	//Vec4 dir_towards_camera = Vec4{inv_VM(0, 2), inv_VM(1, 2), inv_VM(2, 2), inv_VM(3, 2) };
-	//dir_towards_camera.PerspectiveDivide();
 	Vec4 dir_towards_camera = ray_origin - p0;
 	dir_towards_camera.normalize();
 	normal.normalize();
@@ -253,7 +222,6 @@ Vec4 Context::GetNormalizedNormal(const Polygon& polygon, const Vec4& ray_origin
 		normal = Vec4{-normal.x, -normal.y, -normal.z, normal.w};
 	}
 
-	//normal.normalize();
 	return normal;
 }
 
@@ -343,13 +311,12 @@ Vec4 Context::RaySphereIntersection(const Vec4& ray_origin, const Vec4& ray_dire
 
 	float t;
 	if (t0 < 0) {
-		t = t1;
-		if (t < 0) {
+		t0 = t1;
+		if (t0 < 0) {
 			return failed_intersection;
 		};
-	} else {
-		t = t0;
 	}
+	t = t0;
 
 	return ray_origin + (Vec4(ray_direction.x * t, ray_direction.y * t, ray_direction.z * t, 0.0f));
 };
@@ -366,12 +333,13 @@ Color Context::ComputeLighting(const Vec4& ray_origin, const Vec4& intersection,
 		Vec4 L = light_pos - intersection;
 		L.normalize();
 		float cos_alpha = L.dot(surface_normal);
+		cos_alpha = std::max(cos_alpha, 0.0f);
 
 		//specular reflection
 		Vec4 R = (2 * cos_alpha * surface_normal) - L;
 		Vec4 E = ray_origin - intersection;
 		E.normalize();
-		float cos_beta_sh = powf(R.dot(E), material.shine);
+		float cos_beta_sh = powf(std::max(R.dot(E), 0.0f), material.shine);
 
 		//combine the components together
 		color.r += (light.r * material.r * material.kd * cos_alpha) + (light.r * material.r * material.ks * cos_beta_sh);
