@@ -39,11 +39,16 @@ Vec4& Vec4::operator*= (float scalar) {
 }
 
 Vec4 Vec4::Cross3D(const Vec4& vec1, const Vec4& vec2) {
+	//std::cout << "The vectors" << std::endl;
+	//PrintVector(vec1);
+	//PrintVector(vec2);
 	Vec4 result = Vec4(
 		vec1.y * vec2.z - (vec1.z * vec2.y),
 		vec1.z * vec2.x - (vec1.x * vec2.z),
 		vec1.x * vec2.y - (vec1.y * vec2.x),
 		1.0f);
+	//std::cout << "Result" << std::endl;
+	//PrintVector(result);
 	return result;
 }
 

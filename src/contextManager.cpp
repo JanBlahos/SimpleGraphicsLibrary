@@ -42,7 +42,7 @@ int ContextManager::CreateContext(int& width, int& height) {
 		}
 	}
 
-	return 0;
+	return next_idx - 1;
 };
 
 void ContextManager::DestroyContext(int& id) {

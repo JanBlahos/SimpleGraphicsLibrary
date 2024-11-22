@@ -121,6 +121,7 @@ void sglDestroyContext(int id) {
 }
 
 void sglSetContext(int id) {
+    std::cout << "Setting context " << id;
     TRY_HANDLE_EXCEPTIONS({
         cm.SetContext(id);
     })
@@ -363,6 +364,8 @@ void sglMultMatrix(const float *matrix) {
         Matrix new_mat = Matrix::Matmul(ms.Top(), Matrix(4, 4, matrix));
         ms.Pop();
         ms.Push(new_mat);
+        std::cout << "Constructing from float data. Result:" << std::endl;
+        Matrix::PrintMatrix(Matrix(4, 4, matrix));
     })
   }
 

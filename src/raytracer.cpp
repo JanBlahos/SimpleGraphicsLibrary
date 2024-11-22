@@ -78,10 +78,10 @@ void Context::RayTraceScene() {
 	Vp_matrix = matrix_stack.GetViewport();
 
 	//TODO maybe top left should be (0, 0)
-	Vec4 bottom_left = Vec4{0.0f, 0.0f, -1.0f, 1.0f};
-	Vec4 bottom_right = Vec4{ static_cast<float>(win_width), 0.0f, -1.0f, 1.0f };
-	Vec4 top_left = Vec4{ 0.0f, static_cast<float>(win_height), -1.0f, 1.0f };
-	Vec4 top_right = Vec4{ static_cast<float>(win_width), static_cast<float>(win_height), -1.0f, 1.0f };
+	Vec4 top_left = Vec4{0.0f, 0.0f, -1.0f, 1.0f};
+	Vec4 top_right = Vec4{ static_cast<float>(win_width), 0.0f, -1.0f, 1.0f };
+	Vec4 bottom_left = Vec4{ 0.0f, static_cast<float>(win_height), -1.0f, 1.0f };
+	Vec4 bottom_right = Vec4{ static_cast<float>(win_width), static_cast<float>(win_height), -1.0f, 1.0f };
 
 	const auto& sp = sphere_buffer.back();
 	//std::cout << "Sphere xyz and radius:" << sp.x << " " << sp.y << " " << sp.z << " " << sp.radius << "\n";
@@ -153,6 +153,8 @@ void Context::RayTraceScene() {
 
 			Vec4 pixel_in_world = BilinearInterpolation(bl_t, br_t, tl_t, tr_t, u, v);
 			ray_direction = Vec4{ pixel_in_world.x - ray_origin.x, pixel_in_world.y - ray_origin.y, pixel_in_world.z - ray_origin.z, 0.0f };
+			//std::cout << "Ray direction\n";
+			//Vec4::PrintVector(ray_direction);
 			ray_direction.normalize();
 
 			Color color = ComputePixelColor(ray_origin, ray_direction);

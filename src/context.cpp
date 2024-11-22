@@ -11,7 +11,9 @@ Context::Context(unsigned width, unsigned height) {
 	win_width = width;
 	win_height = height;
 	clear_color = Color{ 0.0f, 0.0f, 0.0f };
+	drawing_color = clear_color;
 	depth_buffer = std::vector<float>(width * height, std::numeric_limits<float>::max());
+	color_buffer = std::vector<float>(width * height * 3, 0);
 	matrix_stack = MatrixStack();
 	Vp_matrix = Matrix::Eye(4);
 	PVM_matrix = Matrix::Eye(4);
