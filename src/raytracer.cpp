@@ -326,7 +326,7 @@ Color Context::ComputeLighting(const Vec4& ray_origin, const Vec4& intersection,
 		Vec4 R = (2 * cos_alpha * N) - L;
 		Vec4 E = ray_origin - intersection;
 		E.normalize();
-		float cos_beta_sh = std::powf(std::max(R.dot(E), 0.0f), material.shine);
+		float cos_beta_sh = std::pow(std::max(R.dot(E), 0.0f), material.shine);
 
 		//combine the components together
 		color.r += (light.r * material.r * material.kd * cos_alpha) + (light.r * material.ks * cos_beta_sh);
