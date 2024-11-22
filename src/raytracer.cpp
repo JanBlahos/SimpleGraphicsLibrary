@@ -29,7 +29,7 @@ void Context::SetMaterial(const float r,
 	const float ior) 
 {
 	//TODO throw exceptions
-	materials.push_back(Material{g, b, kd, ks, shine, T, ior});
+	materials.emplace_back(Material{r, g, b, kd, ks, shine, T, ior});
 };
 
 void Context::CreatePointLight(const float x,
@@ -49,7 +49,7 @@ void Context::CreateSphere(const float x,
 	const float radius)
 {
 	//TODO throw exceptions
-	sphere_buffer.push_back(Sphere{x, y, z, radius, &materials.back()});
+	sphere_buffer.push_back(Sphere{x, y, z, radius, materials.size() - 1});
 }
 
 Vec4 Context::BilinearInterpolation(
@@ -78,12 +78,12 @@ void Context::RayTraceScene() {
 	Vp_matrix = matrix_stack.GetViewport();
 
 	//TODO maybe top left should be (0, 0)
-	Vec4 top_left = Vec4{0.0f, 0.0f, -1.0f, 1.0f};
-	Vec4 top_right = Vec4{ static_cast<float>(win_width), 0.0f, -1.0f, 1.0f };
-	Vec4 bottom_left = Vec4{ 0.0f, static_cast<float>(win_height), -1.0f, 1.0f };
-	Vec4 bottom_right = Vec4{ static_cast<float>(win_width), static_cast<float>(win_height), -1.0f, 1.0f };
+	Vec4 bottom_left = Vec4{0.0f, 0.0f, -1.0f, 1.0f};
+	Vec4 bottom_right = Vec4{ static_cast<float>(win_width), 0.0f, -1.0f, 1.0f };
+	Vec4 top_left = Vec4{ 0.0f, static_cast<float>(win_height), -1.0f, 1.0f };
+	Vec4 top_right = Vec4{ static_cast<float>(win_width), static_cast<float>(win_height), -1.0f, 1.0f };
 
-	const auto& sp = sphere_buffer.back();
+	//const auto& sp = sphere_buffer.back();
 	//std::cout << "Sphere xyz and radius:" << sp.x << " " << sp.y << " " << sp.z << " " << sp.radius << "\n";
 
 	std::cout << "corners of the screen in raster:\n";
@@ -221,10 +221,10 @@ Color Context::ComputePixelColor(Vec4 ray_origin, Vec4 ray_direction) {
 
 		//need at least intersection point, primitive material, surface normal
 		// (cross for triangle or subtract center for sphere, normalize!!!)
-		fragment_color = ComputeLighting(nearest_intersection, *intersected_sphere.mat, GetNormalizedNormal(intersected_sphere, nearest_intersection));
+		fragment_color = ComputeLighting(nearest_intersection, materials.at(intersected_sphere.mat_idx), GetNormalizedNormal(intersected_sphere, nearest_intersection));
 	} else { //triangle
 		const auto& intersected_triangle = primitive_buffer[nearest_polygon];
-		fragment_color = ComputeLighting(nearest_intersection, *intersected_triangle.mat, GetNormalizedNormal(intersected_triangle));
+		fragment_color = ComputeLighting(nearest_intersection, materials.at(intersected_triangle.mat_idx), GetNormalizedNormal(intersected_triangle));
 	}
 
 	return fragment_color;

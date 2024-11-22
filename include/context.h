@@ -78,7 +78,7 @@ typedef struct {
 } PointLight;
 
 typedef struct {
-	Material* mat;
+	unsigned long long mat_idx;
 	std::array<Vec4, 3> points; //triangles only, should use
 								// vector for general polygon
 	//std::vector<Vec4> points;
@@ -89,7 +89,7 @@ typedef struct {
 	const float y;
 	const float z;
 	const float radius;
-	Material* mat;
+	unsigned long long mat_idx;
 } Sphere;
 
 /// <summary>
@@ -306,7 +306,7 @@ public:
 	/// <summary>
 	/// Adds a sphere to the sphere buffer
 	/// </summary>
-	void Context::CreateSphere(const float x,
+	void CreateSphere(const float x,
 		const float y,
 		const float z,
 		const float radius);
@@ -421,7 +421,7 @@ private:
 	Vec4 RaySphereIntersection(const Vec4& ray_origin, const Vec4& ray_direction, const Sphere& sphere);
 
 	/// <summary>
-	/// Calculates ligting for fragment in world coords
+	/// Calculates lighting for fragment in world coords
 	/// </summary>
 	Color ComputeLighting(const Vec4& intersection, const Material& material, const Vec4& surface_normal);
 

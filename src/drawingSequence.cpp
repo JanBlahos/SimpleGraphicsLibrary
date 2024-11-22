@@ -35,7 +35,7 @@ void Context::BeginDrawing(sglEElementType mode) {
 	if (is_setting_scene) {
 		//insert new polygon and assign last material
 		primitive_buffer.push_back(Polygon{});
-		primitive_buffer.back().mat = &materials.back();
+		primitive_buffer.back().mat_idx = materials.size() - 1;
 		next_vertex_idx = 0;
 	}
 };
