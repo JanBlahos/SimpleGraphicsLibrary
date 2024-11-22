@@ -20,6 +20,7 @@ Context::Context(unsigned width, unsigned height) {
 	depth_test = false;
 	drawing_mode = SGL_POINTS;
 	filling_mode = SGL_POINT;
+	is_drawing = false;
 	max_y = 0;
 	min_y = height;
 	is_setting_scene = false;

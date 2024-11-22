@@ -116,7 +116,6 @@ void Context::RayTraceScene() {
 	Matrix::InvertMatrix(VM, VM_inv);
 	Vec4 cam_t = Matrix::Matmul(VM_inv, cam);
 	//Vec4 cam_t = Matrix::Matmul(PVM_inv, cam);
-	cam_t.PerspectiveDivide();
 
 	Matrix PVM_Vp_inv = Matrix::Matmul(PVM_inv, Vp_inv);
 
@@ -221,10 +220,10 @@ Color Context::ComputePixelColor(Vec4 ray_origin, Vec4 ray_direction) {
 
 		//need at least intersection point, primitive material, surface normal
 		// (cross for triangle or subtract center for sphere, normalize!!!)
-		fragment_color = ComputeLighting(nearest_intersection, materials.at(intersected_sphere.mat_idx), GetNormalizedNormal(intersected_sphere, nearest_intersection));
+		fragment_color = ComputeLighting(ray_origin, nearest_intersection, materials.at(intersected_sphere.mat_idx), GetNormalizedNormal(intersected_sphere, nearest_intersection));
 	} else { //triangle
 		const auto& intersected_triangle = primitive_buffer[nearest_polygon];
-		fragment_color = ComputeLighting(nearest_intersection, materials.at(intersected_triangle.mat_idx), GetNormalizedNormal(intersected_triangle));
+		fragment_color = ComputeLighting(ray_origin, nearest_intersection, materials.at(intersected_triangle.mat_idx), GetNormalizedNormal(intersected_triangle, ray_origin));
 	}
 
 	return fragment_color;
@@ -237,14 +236,18 @@ Vec4 Context::GetNormalizedNormal(const Sphere& sphere, const Vec4& intersection
 	return normal;
 }
 
-Vec4 Context::GetNormalizedNormal(const Polygon& polygon) {
+Vec4 Context::GetNormalizedNormal(const Polygon& polygon, const Vec4& ray_origin) {
 	const Vec4& p0 = polygon.points[0];
 	const Vec4& p1 = polygon.points[1];
 	const Vec4& p2 = polygon.points[2];
 	Vec4 normal = Vec4::Cross3D(p1 - p0, p1 - p2);
 
 	//flip if facing away, no polygon orientation defined (ccw/cw)
-	Vec4 dir_towards_camera = Vec4{ 0.0f, 0.0f, 1.0f, 0.0f };
+	// dir towards camera is (0, 0, 1, 0) multiplied by VM inversion
+	//Vec4 dir_towards_camera = Vec4{inv_VM(0, 2), inv_VM(1, 2), inv_VM(2, 2), inv_VM(3, 2) };
+	//dir_towards_camera.PerspectiveDivide();
+	Vec4 dir_towards_camera = ray_origin - p0;
+	dir_towards_camera.normalize();
 	normal.normalize();
 	if (normal.dot(dir_towards_camera) < 0) {
 		normal = Vec4{-normal.x, -normal.y, -normal.z, normal.w};
@@ -351,11 +354,30 @@ Vec4 Context::RaySphereIntersection(const Vec4& ray_origin, const Vec4& ray_dire
 	return ray_origin + (Vec4(ray_direction.x * t, ray_direction.y * t, ray_direction.z * t, 0.0f));
 };
 
-Color Context::ComputeLighting(const Vec4& intersection, const Material& material, const Vec4& surface_normal) {
+Color Context::ComputeLighting(const Vec4& ray_origin, const Vec4& intersection, const Material& material, const Vec4& surface_normal) {
 
-	Color color = Color{ material.r, material.g, material.b };
+	//Color color = Color{ material.r, material.g, material.b };
+	Color color = Color{ 0, 0, 0};
 
 	//TODO Phong, utilize points_lights vector
+	for (auto& light : point_lights) {
+		//diffuse reflection
+		Vec4 light_pos = Vec4{ light.x, light.y, light.z, 1.0f };
+		Vec4 L = light_pos - intersection;
+		L.normalize();
+		float cos_alpha = L.dot(surface_normal);
+
+		//specular reflection
+		Vec4 R = (2 * cos_alpha * surface_normal) - L;
+		Vec4 E = ray_origin - intersection;
+		E.normalize();
+		float cos_beta_sh = powf(R.dot(E), material.shine);
+
+		//combine the components together
+		color.r += (light.r * material.r * material.kd * cos_alpha) + (light.r * material.r * material.ks * cos_beta_sh);
+		color.g += (light.g * material.g * material.kd * cos_alpha) + (light.g * material.g * material.ks * cos_beta_sh);
+		color.b += (light.b * material.b * material.kd * cos_alpha) + (light.b * material.b * material.ks * cos_beta_sh);
+	}
 
 	return color;
 };

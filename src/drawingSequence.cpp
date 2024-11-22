@@ -47,17 +47,19 @@ void Context::EndDrawing() {
 
 	// TODO
 	// - close line loop, last triangle, etc. depending on mode
-
-	if (drawing_mode == SGL_LINE_LOOP) {
-		BresenhamLine(very_first_point.x, very_first_point.y, previous_point.x, previous_point.y);
-	}
-	else if (drawing_mode == SGL_POLYGON) {
-		if (filling_mode == SGL_FILL) {
-			AddEdge(very_first_point.x, very_first_point.y, very_first_point.z, previous_point.x, previous_point.y, previous_point.z);
-			Fill();
-			//EndScanLine();
-		} else {
+	if (!is_setting_scene) {
+		if (drawing_mode == SGL_LINE_LOOP) {
 			BresenhamLine(very_first_point.x, very_first_point.y, previous_point.x, previous_point.y);
+		}
+		else if (drawing_mode == SGL_POLYGON) {
+			if (filling_mode == SGL_FILL) {
+				AddEdge(very_first_point.x, very_first_point.y, very_first_point.z, previous_point.x, previous_point.y, previous_point.z);
+				Fill();
+				//EndScanLine();
+			}
+			else {
+				BresenhamLine(very_first_point.x, very_first_point.y, previous_point.x, previous_point.y);
+			}
 		}
 	}
 	is_drawing = false;

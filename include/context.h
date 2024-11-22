@@ -391,7 +391,7 @@ private:
 	/// Computes a surface normal for polygon
 	/// </summary>
 	/// <param name="polygon"> Input polygon</param>
-	Vec4 GetNormalizedNormal(const Polygon& polygon);
+	Vec4 GetNormalizedNormal(const Polygon& polygon, const Vec4& ray_origin);
 
 	/// <summary>
 	/// Bilinearly interpolates, starting between bl, br and tl, tr
@@ -423,7 +423,7 @@ private:
 	/// <summary>
 	/// Calculates lighting for fragment in world coords
 	/// </summary>
-	Color ComputeLighting(const Vec4& intersection, const Material& material, const Vec4& surface_normal);
+	Color ComputeLighting(const Vec4& ray_origin, const Vec4& intersection, const Material& material, const Vec4& surface_normal);
 
 	/// <summary>
 	/// Used to handle the drawing switch based on the current mode
