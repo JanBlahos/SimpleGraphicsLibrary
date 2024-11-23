@@ -27,6 +27,6 @@ private:
     std::mutex queue_mutex;
     std::condition_variable condition;
     std::condition_variable done_condition;
-    std::atomic<size_t> active_tasks;
+    std::atomic<int> active_tasks;
     bool stop;
 };
