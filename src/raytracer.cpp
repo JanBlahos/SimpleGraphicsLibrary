@@ -1,6 +1,5 @@
 #include "context.h"
 #include "exceptions.h"
-#include "threadpool.h"
 #include <iostream>
 
 void Context::BeginScene() {
@@ -64,6 +63,20 @@ Vec4 Context::BilinearInterpolation(
 	return (1.0f - v) * bottom + v * top;
 }
 
+void Context::ResolveOneRow(int r, const Vec4& bl_world, const Vec4& step_x, const Vec4& step_y, const Vec4& ray_origin) {
+	for (int c = 0; c < win_width; ++c) {
+		Vec4 pixel_in_world = bl_world + (c * step_x) + (r * step_y);
+		Vec4 ray_direction = Vec4{ pixel_in_world.x - ray_origin.x, pixel_in_world.y - ray_origin.y, pixel_in_world.z - ray_origin.z, 0.0f };
+		ray_direction.normalize();
+
+		Color color = ComputePixelColor(ray_origin, ray_direction);
+		if (color.r == -1.0f) continue;
+
+		//setpixel uses x, y not row column, so column becomes x
+		SetPixelNoChecks(c, r, color);
+	}
+}
+
 void Context::RayTraceScene() {
 	//TODO throw exceptions
 
@@ -107,23 +120,31 @@ void Context::RayTraceScene() {
 	Vec4 ray_origin = cam_t;
 	Vec4 ray_direction = Vec4{ 0.0f, 0.0f, 0.0f, 0.0f };
 
+	Vec4 step_x = (br_t - bl_t) * (1.0f / (win_width - 1));
+	Vec4 step_y = (tl_t - bl_t) * (1.0f / (win_height - 1));
+
 	for (int r = 0; r < win_height; ++r) {
-		for (int c = 0; c < win_width; ++c) {
-			float u = static_cast<float>(c) / (win_width - 1);
-			float v = static_cast<float>(r) / (win_height - 1);
+		//for (int c = 0; c < win_width; ++c) {
 
-			Vec4 pixel_in_world = BilinearInterpolation(bl_t, br_t, tl_t, tr_t, u, v);
-			ray_direction = Vec4{ pixel_in_world.x - ray_origin.x, pixel_in_world.y - ray_origin.y, pixel_in_world.z - ray_origin.z, 0.0f };
-			ray_direction.normalize();
+			thread_pool.enqueue([&, r, bl_t, step_x, step_y, ray_origin]() {
+				ResolveOneRow(r, bl_t, step_x, step_y, ray_origin);
+			});
 
-			Color color = ComputePixelColor(ray_origin, ray_direction);
+			//float u = static_cast<float>(c) / (win_width - 1);
+			//float v = static_cast<float>(r) / (win_height - 1);
 
-			if (color.r == -1.0f) continue;
+			//Vec4 pixel_in_world = BilinearInterpolation(bl_t, br_t, tl_t, tr_t, u, v);
+			//ray_direction = Vec4{ pixel_in_world.x - ray_origin.x, pixel_in_world.y - ray_origin.y, pixel_in_world.z - ray_origin.z, 0.0f };
+			//ray_direction.normalize();
 
-			//setpixel uses x, y not row column, so column becomes x
-			SetPixelNoChecks(c, r, color);
-		}
+			//Color color = ComputePixelColor(ray_origin, ray_direction);
+			//if (color.r == -1.0f) continue;
+
+			////setpixel uses x, y not row column, so column becomes x
+			//SetPixelNoChecks(c, r, color);
+		//}
 	}
+	thread_pool.WaitUntilFinished();
 };
 
 Color Context::ComputePixelColor(Vec4 ray_origin, Vec4 ray_direction) {

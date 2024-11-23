@@ -8,6 +8,10 @@ class ThreadPool {
 public:
     ThreadPool(unsigned numThreads);
 
+    ~ThreadPool();
+
+    void WaitUntilFinished();
+
     template <class F>
     void enqueue(F&& f) {
         {
@@ -15,14 +19,14 @@ public:
             tasks.emplace(std::forward<F>(f));
         }
         condition.notify_one();
-    }
-
-    ~ThreadPool();
+    };
 
 private:
     std::vector<std::thread> workers;
     std::queue<std::function<void()>> tasks;
     std::mutex queue_mutex;
     std::condition_variable condition;
-    bool stop = false;
+    std::condition_variable done_condition;
+    std::atomic<size_t> active_tasks;
+    bool stop;
 };

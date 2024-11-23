@@ -6,7 +6,7 @@
 #include <limits>
 #include <execution>
 
-Context::Context(unsigned width, unsigned height) {
+Context::Context(unsigned width, unsigned height) : thread_pool(std::thread::hardware_concurrency()) {
 	is_drawing = false;
 	win_width = width;
 	win_height = height;

@@ -10,6 +10,7 @@
 
 #include "sgl.h"
 #include "matrixStack.h"
+#include "threadpool.h"
 
 #define NUM_SEGMENTS 40
 #define QUADRANT_SEGMENTS 10
@@ -361,6 +362,8 @@ private:
 	//for buffering triangle vertices in RT
 	unsigned next_vertex_idx;
 
+	ThreadPool thread_pool;
+
 	//returns index to the color buffer based off of screen coords
 	unsigned Pixel2Index(unsigned x, unsigned y);
 
@@ -407,6 +410,11 @@ private:
 		const Vec4& bl, const Vec4& br,
 		const Vec4& tl, const Vec4& tr,
 		float u, float v);
+
+	/// <summary>
+	/// Method passed to a thread that computes a pixel color and writes it to color buffer
+	/// </summary>
+	void ResolveOneRow(int r, const Vec4& bl_world, const Vec4& step_x, const Vec4& step_y, const Vec4& ray_origin);
 
 	/// <summary>
 	/// Computes a ray-triangle intersection if it exists, returns
