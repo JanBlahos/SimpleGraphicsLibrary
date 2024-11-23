@@ -3,6 +3,8 @@
 #include <thread>
 #include <functional>
 #include <condition_variable>
+#include <atomic>
+#include <memory>
 
 class ThreadPool {
 public:
