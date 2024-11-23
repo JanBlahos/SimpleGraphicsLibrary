@@ -4,7 +4,7 @@
 
 void Context::BeginScene() {
 	if (is_drawing) {
-		throw SGLInvalidOperationException("Called inside Begin-End sequence");
+		throw SGLInvalidOperationException("BeginScene called inside Begin-End sequence");
 	}
 
 	is_setting_scene = true;
@@ -12,7 +12,7 @@ void Context::BeginScene() {
 
 void Context::EndScene() {
 	if (is_drawing) {
-		throw SGLInvalidOperationException("Called inside Begin-End sequence");
+		throw SGLInvalidOperationException("EndScene called inside Begin-End sequence");
 	}
 
 	is_setting_scene = false;
@@ -28,7 +28,9 @@ void Context::SetMaterial(const float r,
 	const float T,
 	const float ior) 
 {
-	//TODO throw exceptions
+	if (is_drawing) {
+		throw SGLInvalidOperationException("SetMaterial called inside Begin-End sequence");
+	}
 	materials.emplace_back(Material{r, g, b, kd, ks, shine, T, ior});
 };
 
@@ -39,7 +41,12 @@ void Context::CreatePointLight(const float x,
 	const float g,
 	const float b) 
 {
-	//TODO throw exceptions
+	if (is_drawing) {
+		throw SGLInvalidOperationException("CreatePointLight called inside Begin-End sequence");
+	}
+	else if (!is_setting_scene) {
+		throw SGLInvalidOperationException("CreatePointLight called outside BeginScene-EndScene sequence");
+	}
 	point_lights.push_back(PointLight{x, y, z, r, g, b});
 };
 
@@ -48,7 +55,12 @@ void Context::CreateSphere(const float x,
 	const float z,
 	const float radius)
 {
-	//TODO throw exceptions
+	if (is_drawing) {
+		throw SGLInvalidOperationException("CreateSphere called inside Begin-End sequence");
+	}
+	else if (!is_setting_scene) {
+		throw SGLInvalidOperationException("CreateSphere called outside BeginScene-EndScene sequence");
+	}
 	sphere_buffer.push_back(Sphere{x, y, z, radius, materials.size() - 1});
 }
 
@@ -64,7 +76,7 @@ Vec4 Context::BilinearInterpolation(
 }
 
 void Context::ResolveOneRow(int r, const Vec4& bl_world, const Vec4& step_x, const Vec4& step_y, const Vec4& ray_origin) {
-	for (int c = 0; c < win_width; ++c) {
+	for (unsigned c = 0; c < win_width; ++c) {
 		Vec4 pixel_in_world = bl_world + (c * step_x) + (r * step_y);
 		Vec4 ray_direction = Vec4{ pixel_in_world.x - ray_origin.x, pixel_in_world.y - ray_origin.y, pixel_in_world.z - ray_origin.z, 0.0f };
 		ray_direction.normalize();
@@ -78,7 +90,12 @@ void Context::ResolveOneRow(int r, const Vec4& bl_world, const Vec4& step_x, con
 }
 
 void Context::RayTraceScene() {
-	//TODO throw exceptions
+	if (is_drawing) {
+		throw SGLInvalidOperationException("RayTraceScene called inside Begin-End sequence");
+	}
+	else if (is_setting_scene) {
+		throw SGLInvalidOperationException("RayTraceScene called inside BeginScene-EndScene sequence");
+	}
 
 	//fetch matrices, BeginScene() does this but isn't called for
 	//sphere-only scenes
@@ -118,12 +135,11 @@ void Context::RayTraceScene() {
 	tr_t.PerspectiveDivide();
 
 	Vec4 ray_origin = cam_t;
-	Vec4 ray_direction = Vec4{ 0.0f, 0.0f, 0.0f, 0.0f };
 
 	Vec4 step_x = (br_t - bl_t) * (1.0f / (win_width - 1));
 	Vec4 step_y = (tl_t - bl_t) * (1.0f / (win_height - 1));
 
-	for (int r = 0; r < win_height; ++r) {
+	for (unsigned r = 0; r < win_height; ++r) {
 		//for (int c = 0; c < win_width; ++c) {
 
 			thread_pool.enqueue([&, r, bl_t, step_x, step_y, ray_origin]() {
@@ -154,7 +170,7 @@ Color Context::ComputePixelColor(Vec4 ray_origin, Vec4 ray_direction) {
 	float smallest_dist = std::numeric_limits<float>::max();
 	Vec4 nearest_intersection = Vec4{ 0.0f, 0.0f, 0.0f, 0.0f };
 
-	for (int i = 0; i < sphere_buffer.size(); ++i) {
+	for (unsigned long i = 0; i < sphere_buffer.size(); ++i) {
 		const auto& sphere = sphere_buffer[i];
 
 		Vec4 intersection = RaySphereIntersection(ray_origin, ray_direction, sphere);
@@ -169,7 +185,7 @@ Color Context::ComputePixelColor(Vec4 ray_origin, Vec4 ray_direction) {
 		}
 	}
 
-	for (int i = 0; i < primitive_buffer.size(); ++i) {
+	for (unsigned long i = 0; i < primitive_buffer.size(); ++i) {
 		const auto& primitive = primitive_buffer[i];
 		
 		if (primitive.points.size() != 3) {
@@ -241,7 +257,7 @@ Vec4 Context::RayTriangleIntersection(const Vec4& ray_origin, const Vec4& ray_di
 	// https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
 
 	// 1.0f minus the next representable value, essentially this is just 0
-	// used because of float numerical inprescision
+	// used because of float numerical imprescision
 	constexpr float epsilon = std::numeric_limits<float>::epsilon();
 
 	Vec4 e1 = primitive.points[1] - primitive.points[0];

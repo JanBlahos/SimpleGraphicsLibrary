@@ -1,7 +1,9 @@
 
 #include "threadpool.h"
 
-ThreadPool::ThreadPool(unsigned num_threads) : stop(false), active_tasks(0) {
+ThreadPool::ThreadPool(unsigned num_threads){
+    stop = false;
+    active_tasks = 0;
     for (unsigned i = 0; i < num_threads; ++i) {
         workers.emplace_back([this]() {
             while (true) {
