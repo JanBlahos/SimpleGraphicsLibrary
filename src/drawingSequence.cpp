@@ -143,7 +143,7 @@ void Context::DrawVertex(int x1, int y1, float depth) {
 	}
 }
 
-void Context::AddVertexToPolygon(const Vec4& v) {
+void Context::AddVertexToPolygon(const Vec3& v) {
 	auto& pts = primitive_buffer.back().points;
 	pts[next_vertex_idx] = v;
 	next_vertex_idx++;
@@ -151,11 +151,14 @@ void Context::AddVertexToPolygon(const Vec4& v) {
 
 void Context::BufferVertex4f(float x, float y, float z, float w) {
 	//tranform to screen
-	Vec4 v(x, y, z, w);
+	
 	if (is_setting_scene) {
+		Vec3 v(x, y, z);
 		AddVertexToPolygon(v);
 		return;
 	}
+
+	Vec4 v(x, y, z, w);
 	Vec4 transformed_vec = Matrix::Matmul(PVM_matrix, v);
 	transformed_vec.PerspectiveDivide();
 	Vec4 vec_in_screen = Matrix::Matmul(Vp_matrix, transformed_vec);

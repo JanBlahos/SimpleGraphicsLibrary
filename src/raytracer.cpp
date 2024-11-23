@@ -75,10 +75,10 @@ Vec4 Context::BilinearInterpolation(
 	return (1.0f - v) * bottom + v * top;
 }
 
-void Context::ResolveOneRow(int r, const Vec4& bl_world, const Vec4& step_x, const Vec4& step_y, const Vec4& ray_origin) {
+void Context::ResolveOneRow(int r, const Vec3& bl_world, const Vec3& step_x, const Vec3& step_y, const Vec3& ray_origin) {
 	for (unsigned c = 0; c < win_width; ++c) {
-		Vec4 pixel_in_world = bl_world + (c * step_x) + (r * step_y);
-		Vec4 ray_direction = Vec4{ pixel_in_world.x - ray_origin.x, pixel_in_world.y - ray_origin.y, pixel_in_world.z - ray_origin.z, 0.0f };
+		Vec3 pixel_in_world = bl_world + (c * step_x) + (r * step_y);
+		Vec3 ray_direction = Vec4{ pixel_in_world.x - ray_origin.x, pixel_in_world.y - ray_origin.y, pixel_in_world.z - ray_origin.z };
 		ray_direction.normalize();
 
 		Color color = ComputePixelColor(ray_origin, ray_direction);
@@ -113,68 +113,61 @@ void Context::RayTraceScene() {
 	Vec4 cam = Vec4{0.0f, 0.0f, 0.0f, 1.0f};
 
 	Matrix PVM_inv, Vp_inv;
-	Matrix::InvertMatrix(PVM_matrix, PVM_inv);
-	Matrix::InvertMatrix(Vp_matrix, Vp_inv);
+	//Matrix::InvertMatrix(PVM_matrix, PVM_inv);
+	//Matrix::InvertMatrix(Vp_matrix, Vp_inv);
+	Matrix VpPVM = Matrix::Matmul(Vp_matrix, PVM_matrix);
 
 	//transform camera
 	Matrix VM_inv;
 	Matrix::InvertMatrix(VM, VM_inv);
 	Vec4 cam_t = Matrix::Matmul(VM_inv, cam);
 
-	Matrix PVM_Vp_inv = Matrix::Matmul(PVM_inv, Vp_inv);
+	//Matrix PVM_Vp_inv = Matrix::Matmul(PVM_inv, Vp_inv);
+	Matrix PVM_Vp_inv;
+	Matrix::InvertMatrix(VpPVM, PVM_Vp_inv);
 
 	//tranform raster corners
-	Vec4 bl_t = Matrix::Matmul(PVM_Vp_inv, bottom_left); //tranformed bottom left
-	Vec4 br_t = Matrix::Matmul(PVM_Vp_inv, bottom_right); //tranformed bottom right
-	Vec4 tl_t = Matrix::Matmul(PVM_Vp_inv, top_left);; //tranformed top left
-	Vec4 tr_t = Matrix::Matmul(PVM_Vp_inv, top_right);; //transformed top right
+	Vec4 bl_t4 = Matrix::Matmul(PVM_Vp_inv, bottom_left); //tranformed bottom left
+	Vec4 br_t4 = Matrix::Matmul(PVM_Vp_inv, bottom_right); //tranformed bottom right
+	Vec4 tl_t4 = Matrix::Matmul(PVM_Vp_inv, top_left);; //tranformed top left
+	Vec4 tr_t4 = Matrix::Matmul(PVM_Vp_inv, top_right);; //transformed top right
 
-	bl_t.PerspectiveDivide();
-	br_t.PerspectiveDivide();
-	tl_t.PerspectiveDivide();
-	tr_t.PerspectiveDivide();
+	bl_t4.PerspectiveDivide();
+	br_t4.PerspectiveDivide();
+	tl_t4.PerspectiveDivide();
+	tr_t4.PerspectiveDivide();
 
-	Vec4 ray_origin = cam_t;
+	Vec3 bl_t(bl_t4);
+	Vec3 br_t(br_t4);
+	Vec3 tl_t(tl_t4);
+	Vec3 tr_t(tr_t4);
 
-	Vec4 step_x = (br_t - bl_t) * (1.0f / (win_width - 1));
-	Vec4 step_y = (tl_t - bl_t) * (1.0f / (win_height - 1));
+	Vec3 ray_origin(cam_t);
+
+	Vec3 step_x = (br_t - bl_t) * (1.0f / (win_width - 1));
+	Vec3 step_y = (tl_t - bl_t) * (1.0f / (win_height - 1));
 
 	for (unsigned r = 0; r < win_height; ++r) {
-		//for (int c = 0; c < win_width; ++c) {
 
-			thread_pool.enqueue([&, r, bl_t, step_x, step_y, ray_origin]() {
-				ResolveOneRow(r, bl_t, step_x, step_y, ray_origin);
-			});
-
-			//float u = static_cast<float>(c) / (win_width - 1);
-			//float v = static_cast<float>(r) / (win_height - 1);
-
-			//Vec4 pixel_in_world = BilinearInterpolation(bl_t, br_t, tl_t, tr_t, u, v);
-			//ray_direction = Vec4{ pixel_in_world.x - ray_origin.x, pixel_in_world.y - ray_origin.y, pixel_in_world.z - ray_origin.z, 0.0f };
-			//ray_direction.normalize();
-
-			//Color color = ComputePixelColor(ray_origin, ray_direction);
-			//if (color.r == -1.0f) continue;
-
-			////setpixel uses x, y not row column, so column becomes x
-			//SetPixelNoChecks(c, r, color);
-		//}
+		thread_pool.enqueue([&, r, bl_t, step_x, step_y, ray_origin]() {
+			ResolveOneRow(r, bl_t, step_x, step_y, ray_origin);
+		});
 	}
 	thread_pool.WaitUntilFinished();
 };
 
-Color Context::ComputePixelColor(Vec4 ray_origin, Vec4 ray_direction) {
+Color Context::ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_direction) {
 	
 	int nearest_polygon = -1;
 	int nearest_sphere = -1;
 	float smallest_dist = std::numeric_limits<float>::max();
-	Vec4 nearest_intersection = Vec4{ 0.0f, 0.0f, 0.0f, 0.0f };
+	Vec3 nearest_intersection;
 
 	for (unsigned long i = 0; i < sphere_buffer.size(); ++i) {
 		const auto& sphere = sphere_buffer[i];
 
-		Vec4 intersection = RaySphereIntersection(ray_origin, ray_direction, sphere);
-		if (intersection.w == -1) continue;
+		Vec3 intersection;
+		if (!RaySphereIntersection(ray_origin, ray_direction, sphere, intersection)) continue;
 
 		float new_dist = intersection.Distance(ray_origin);
 
@@ -193,8 +186,8 @@ Color Context::ComputePixelColor(Vec4 ray_origin, Vec4 ray_direction) {
 				"are currently not supported");
 		}
 
-		Vec4 intersection = RayTriangleIntersection(ray_origin, ray_direction, primitive);
-		if (intersection.w == -1) continue;
+		Vec3 intersection;
+		if (!RayTriangleIntersection(ray_origin, ray_direction, primitive, intersection)) continue;
 
 		float new_dist = intersection.Distance(ray_origin);
 
@@ -226,32 +219,31 @@ Color Context::ComputePixelColor(Vec4 ray_origin, Vec4 ray_direction) {
 	return fragment_color;
 }
 
-Vec4 Context::GetNormalizedNormal(const Sphere& sphere, const Vec4& intersection) {
-	Vec4 center = Vec4{sphere.x, sphere.y, sphere.z, 1.0f};
-	Vec4 normal = intersection - center;
+Vec3 Context::GetNormalizedNormal(const Sphere& sphere, const Vec3& intersection) {
+	Vec3 center = Vec3{sphere.x, sphere.y, sphere.z};
+	Vec3 normal = intersection - center;
 	normal.normalize();
 	return normal;
 }
 
-Vec4 Context::GetNormalizedNormal(const Polygon& polygon, const Vec4& ray_origin) {
-	const Vec4& p0 = polygon.points[0];
-	const Vec4& p1 = polygon.points[1];
-	const Vec4& p2 = polygon.points[2];
-	Vec4 normal = Vec4::Cross3D(p1 - p0, p1 - p2);
+Vec3 Context::GetNormalizedNormal(const Polygon& polygon, const Vec3& ray_origin) {
+	const Vec3& p0 = polygon.points[0];
+	const Vec3& p1 = polygon.points[1];
+	const Vec3& p2 = polygon.points[2];
+	Vec3 normal = Vec3::Cross3D(p1 - p0, p1 - p2);
 
 	//flip if facing away, no polygon orientation defined (ccw/cw)
-	Vec4 dir_towards_camera = ray_origin - p0;
+	Vec3 dir_towards_camera = ray_origin - p0;
 	dir_towards_camera.normalize();
 	normal.normalize();
 	if (normal.dot(dir_towards_camera) < 0) {
-		normal = Vec4{-normal.x, -normal.y, -normal.z, normal.w};
+		normal = Vec3{-normal.x, -normal.y, -normal.z};
 	}
 
 	return normal;
 }
 
-Vec4 Context::RayTriangleIntersection(const Vec4& ray_origin, const Vec4& ray_direction, const Polygon& primitive) {
-	Vec4 failed_intersection = Vec4{0.0f, 0.0f, 0.0f, -1.0f};
+bool Context::RayTriangleIntersection(const Vec3& ray_origin, const Vec3& ray_direction, const Polygon& primitive, Vec3& intersection) {
 
 	// Moller-Trumbore intersection algorithm implementation
 	// https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
@@ -260,9 +252,9 @@ Vec4 Context::RayTriangleIntersection(const Vec4& ray_origin, const Vec4& ray_di
 	// used because of float numerical imprescision
 	constexpr float epsilon = std::numeric_limits<float>::epsilon();
 
-	Vec4 e1 = primitive.points[1] - primitive.points[0];
-	Vec4 e2 = primitive.points[2] - primitive.points[0];
-	Vec4 ray_cross_e2 = Vec4::Cross3D(ray_direction, e2);
+	Vec3 e1 = primitive.points[1] - primitive.points[0];
+	Vec3 e2 = primitive.points[2] - primitive.points[0];
+	Vec3 ray_cross_e2 = Vec3::Cross3D(ray_direction, e2);
 
 	// these represent determinants of the
 	// linear equation system
@@ -272,37 +264,38 @@ Vec4 Context::RayTriangleIntersection(const Vec4& ray_origin, const Vec4& ray_di
 	float det = e1.dot(ray_cross_e2);
 
 	if (std::abs(det) < epsilon) { // parallel
-		return failed_intersection;
+		return false;
 	}
 
 	float inv_det = 1.0f / det;
-	Vec4 s = ray_origin - primitive.points[0];
+	Vec3 s = ray_origin - primitive.points[0];
 	// the u parameter representing the coefficent of edge 1
 	float u = inv_det * s.dot(ray_cross_e2);
 
 	if ((u < 0 && std::abs(u) > epsilon) || (u > 1 && std::abs(u - 1) > epsilon)) {
-		return failed_intersection;
+		return false;
 	}
 
-	Vec4 s_cross_e1 = Vec4::Cross3D(s, e1);
+	Vec3 s_cross_e1 = Vec3::Cross3D(s, e1);
 	// the v parameter representing the coefficient of edge 2
 	// these two need to be a convex combination of the edges to be within the triangle
 	float v = inv_det * ray_direction.dot(s_cross_e1);
 
 	if ((v < 0 && std::abs(v) > epsilon) || (u + v > 1 && std::abs(u + v - 1) > epsilon)) {
-		return failed_intersection;
+		return false;
 	}
 	// t parameter representing the coefficient of ray direction
 	float t = inv_det * e2.dot(s_cross_e1);
 
 	if (t <= epsilon) {
-		return failed_intersection;
+		return false;
 	}
 
-	return ray_origin + (Vec4(ray_direction.x * t, ray_direction.y * t, ray_direction.z * t, 0.0f));
+	intersection = ray_origin + (Vec3(ray_direction.x * t, ray_direction.y * t, ray_direction.z * t));
+	return true;
 };
 
-Vec4 Context::RaySphereIntersection(const Vec4& ray_origin, const Vec4& ray_direction, const Sphere& sphere) {
+bool Context::RaySphereIntersection(const Vec3& ray_origin, const Vec3& ray_direction, const Sphere& sphere, Vec3& intersection) {
 	Vec4 failed_intersection = Vec4{ 0.0f, 0.0f, 0.0f, -1.0f };
 
 	// implementation of geometric solution found here:
@@ -311,19 +304,19 @@ Vec4 Context::RaySphereIntersection(const Vec4& ray_origin, const Vec4& ray_dire
 
 	float t0, t1;
 
-	Vec4 center = Vec4{sphere.x, sphere.y, sphere.z, 1.0f};
-	Vec4 L = center - ray_origin;
+	Vec3 center = Vec3{sphere.x, sphere.y, sphere.z};
+	Vec3 L = center - ray_origin;
 	float tca = L.dot(ray_direction);
 
 	if (tca < 0) {
-		return failed_intersection;
+		return false;
 	}
 
 	//compare squared dist to avoid sqrt computation
 	float d2 = L.dot(L) - tca*tca;
 
 	if (d2 > sphere.radius * sphere.radius) {
-		return failed_intersection;
+		return false;
 	}
 
 	float thc = std::sqrt(sphere.radius*sphere.radius - d2);
@@ -338,31 +331,32 @@ Vec4 Context::RaySphereIntersection(const Vec4& ray_origin, const Vec4& ray_dire
 	if (t0 < 0) {
 		t0 = t1;
 		if (t0 < 0) {
-			return failed_intersection;
+			return false;
 		};
 	}
 	t = t0;
 
-	return ray_origin + (Vec4(ray_direction.x * t, ray_direction.y * t, ray_direction.z * t, 0.0f));
+	intersection = ray_origin + (Vec3(ray_direction.x * t, ray_direction.y * t, ray_direction.z * t));
+	return true;
 };
 
-Color Context::ComputeLighting(const Vec4& ray_origin, const Vec4& intersection, const Material& material, const Vec4& surface_normal) {
+Color Context::ComputeLighting(const Vec3& ray_origin, const Vec3& intersection, const Material& material, const Vec3& surface_normal) {
 
 	//Phong
 	Color color = Color{ 0.0f, 0.0f, 0.0f };
-	const Vec4& N = surface_normal;
+	const Vec3& N = surface_normal;
 	
 	for (auto& light : point_lights) {
 		//diffuse reflection
-		Vec4 light_pos = Vec4{ light.x, light.y, light.z, 1.0f };
-		Vec4 L = light_pos - intersection;
+		Vec3 light_pos = Vec3{ light.x, light.y, light.z };
+		Vec3 L = light_pos - intersection;
 		L.normalize();
 		float cos_alpha = L.dot(N);
 		cos_alpha = std::max(cos_alpha, 0.0f);
 
 		//specular reflection
-		Vec4 R = (2 * cos_alpha * N) - L;
-		Vec4 E = ray_origin - intersection;
+		Vec3 R = (2 * cos_alpha * N) - L;
+		Vec3 E = ray_origin - intersection;
 		E.normalize();
 		float cos_beta_sh = std::pow(std::max(R.dot(E), 0.0f), material.shine);
 

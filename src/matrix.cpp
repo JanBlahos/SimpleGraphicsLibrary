@@ -4,6 +4,104 @@
 #include <xmmintrin.h>
 #include <pmmintrin.h>
 
+float Vec3::dot(const Vec3& vec) const {
+	return x * vec.x + y * vec.y + z * vec.z;
+}
+
+void Vec3::normalize() {
+	float norm = sqrt(x * x + y * y + z * z);
+	x = x / norm;
+	y = y / norm;
+	z = z / norm;
+}
+
+Vec3 Vec3::operator* (float scalar) const {
+	return Vec3{ x * scalar, y * scalar, z * scalar };
+}
+
+Vec3& Vec3::operator*= (float scalar) {
+	x *= scalar;
+	y *= scalar;
+	z *= scalar;
+	return *this;
+}
+
+Vec3 Vec3::Cross3D(const Vec3& vec1, const Vec3& vec2) {
+	Vec3 result = Vec3(
+		vec1.y * vec2.z - (vec1.z * vec2.y),
+		vec1.z * vec2.x - (vec1.x * vec2.z),
+		vec1.x * vec2.y - (vec1.y * vec2.x));
+
+	return result;
+}
+
+float Vec3::Distance(const Vec3& other) const {
+	float dx = x - other.x;
+	float dy = y - other.y;
+	float dz = z - other.z;
+
+	return std::sqrt(dx * dx + dy * dy + dz * dz);
+}
+
+Vec3 operator+ (Vec3 vec1, const Vec3& vec2) {
+	vec1 += vec2;
+	return vec1;
+}
+
+Vec3& Vec3::operator+= (const Vec3& other) {
+	x += other.x;
+	y += other.y;
+	z += other.z;
+	return *this;
+}
+
+Vec3 operator- (Vec3 vec1, const Vec3& vec2) {
+	vec1 -= vec2;
+	return vec1;
+}
+
+Vec3& Vec3::operator-= (const Vec3& other) {
+	x -= other.x;
+	y -= other.y;
+	z -= other.z;
+	return *this;
+}
+
+
+void Vec3::PrintVector(const Vec3& vec) {
+	for (unsigned i = 0; i < 3; i++) {
+		std::cout << vec(i) << " ";
+	}
+	std::cout << "\n";
+}
+
+
+float& Vec3::operator() (unsigned position) {
+	switch (position) {
+	case sglAxis::X_AXIS:
+		return x;
+	case sglAxis::Y_AXIS:
+		return y;
+	case sglAxis::Z_AXIS:
+		return z;
+	default:
+		throw BadIndexException("Attempting to access vector at invalid position " + std::to_string(position));
+	}
+}
+
+float Vec3::operator() (unsigned position) const {
+	switch (position) {
+	case sglAxis::X_AXIS:
+		return x;
+	case sglAxis::Y_AXIS:
+		return y;
+	case sglAxis::Z_AXIS:
+		return z;
+	default:
+		throw BadIndexException("Attempting to access vector at invalid position " + std::to_string(position));
+	}
+}
+
 void Vec4::PerspectiveDivide() {
 	if (w == 0) {
 		return;
@@ -543,7 +641,7 @@ bool Matrix::InvertMatrix(const Matrix& matrix, Matrix& inverse_matrix) {
 	std::array<float, 16> new_data;
 
 	for (i = 0; i < 16; i++)
-		new_data[i] = inv[i] * det;
+		new_data[i] = static_cast<float>(inv[i] * det);
 
 	inverse_matrix = Matrix(4, 4, new_data);
 

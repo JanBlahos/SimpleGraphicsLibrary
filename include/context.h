@@ -80,7 +80,7 @@ typedef struct {
 
 typedef struct {
 	unsigned long long mat_idx;
-	std::array<Vec4, 3> points; //triangles only, should use
+	std::array<Vec3, 3> points; //triangles only, should use
 								// vector for general polygon
 	//std::vector<Vec4> points;
 } Polygon;
@@ -137,7 +137,7 @@ public:
 	/// <summary>
 	/// Adds vertex to last polygon when setting scene
 	/// </summary>
-	void AddVertexToPolygon(const Vec4& v);
+	void AddVertexToPolygon(const Vec3& v);
 
 	/// <summary>
 	/// Buffers a 4 component vertex into vertex buffer
@@ -381,20 +381,20 @@ private:
 	/// </summary>
 	/// <param name="ray_origin"> Where the ray is cast from</param>
 	/// <param name="ray_direction"> Normalized direction vector</param>
-	Color ComputePixelColor(Vec4 ray_origin, Vec4 ray_direction);
+	Color ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_direction);
 
 	/// <summary>
 	/// Computes a surface normal for sphere
 	/// </summary>
 	/// <param name="sphere"> Input sphere for center coords</param>
 	/// <param name="intersection"> Intersection with ray</param>
-	Vec4 GetNormalizedNormal(const Sphere& sphere, const Vec4& intersection);
+	Vec3 GetNormalizedNormal(const Sphere& sphere, const Vec3& intersection);
 
 	/// <summary>
 	/// Computes a surface normal for polygon
 	/// </summary>
 	/// <param name="polygon"> Input polygon</param>
-	Vec4 GetNormalizedNormal(const Polygon& polygon, const Vec4& ray_origin);
+	Vec3 GetNormalizedNormal(const Polygon& polygon, const Vec3& ray_origin);
 
 	/// <summary>
 	/// Bilinearly interpolates, starting between bl, br and tl, tr
@@ -414,24 +414,24 @@ private:
 	/// <summary>
 	/// Method passed to a thread that computes a pixel color and writes it to color buffer
 	/// </summary>
-	void ResolveOneRow(int r, const Vec4& bl_world, const Vec4& step_x, const Vec4& step_y, const Vec4& ray_origin);
+	void ResolveOneRow(int r, const Vec3& bl_world, const Vec3& step_x, const Vec3& step_y, const Vec3& ray_origin);
 
 	/// <summary>
 	/// Computes a ray-triangle intersection if it exists, returns
 	/// -1 in w component otherwise
 	/// </summary>
-	Vec4 RayTriangleIntersection(const Vec4& ray_origin, const Vec4& ray_direction, const Polygon& primitive);
+	bool RayTriangleIntersection(const Vec3& ray_origin, const Vec3& ray_direction, const Polygon& primitive, Vec3& intersection);
 
 	/// <summary>
 	/// Computes a ray-sphere intersection if it exists, returns
 	/// -1 in w component otherwise
 	/// </summary>
-	Vec4 RaySphereIntersection(const Vec4& ray_origin, const Vec4& ray_direction, const Sphere& sphere);
+	bool RaySphereIntersection(const Vec3& ray_origin, const Vec3& ray_direction, const Sphere& sphere, Vec3& intersection);
 
 	/// <summary>
 	/// Calculates lighting for fragment in world coords
 	/// </summary>
-	Color ComputeLighting(const Vec4& ray_origin, const Vec4& intersection, const Material& material, const Vec4& surface_normal);
+	Color ComputeLighting(const Vec3& ray_origin, const Vec3& intersection, const Material& material, const Vec3& surface_normal);
 
 	/// <summary>
 	/// Used to handle the drawing switch based on the current mode

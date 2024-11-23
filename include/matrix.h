@@ -16,7 +16,6 @@
 //Would need to include math.h for PI constant
 constexpr float PI = 3.14159265358979323846f;
 
-
 typedef enum {
 	X_AXIS = 0,
 	Y_AXIS,
@@ -141,6 +140,119 @@ public:
 };
 
 inline Vec4 operator* (float scalar, const Vec4& vec) {
+	return vec * scalar;
+}
+
+/// <summary>
+/// Class representing a 3 dimensional vector with xyz components
+/// </summary>
+class Vec3 {
+public:
+	float x;
+	float y;
+	float z;
+	/// <summary>
+	/// Costruct a 3 component vector.
+	/// </summary>
+	/// <param name="x"> x axis</param>
+	/// <param name="y"> y axis</param>
+	/// <param name="z"> z axis </param>
+	Vec3(float x, float y, float z) : x(x), y(y), z(z) {}
+
+	/// <summary>
+	/// Ctor from higher dimension vector, ignores w component
+	/// </summary>
+	Vec3(const Vec4& other) : x(other.x), y(other.y), z(other.z) {};
+
+	/// <summary>
+	/// Default ctor
+	/// </summary>
+	Vec3() = default;
+
+	/// <summary>
+	/// Subscript operators directly to the vector.
+	/// </summary>
+	float& operator() (unsigned position);
+	float operator() (unsigned position) const;
+
+	/// <summary>
+	/// Normalize the vector components, turning it into a unit vector.
+	/// </summary>
+	void normalize();
+
+	/// <summary>
+	/// Compute the dot product between the current and the given vector
+	/// ignoring the w component.
+	/// </summary>
+	/// <param name="vec"></param>
+	/// <returns></returns>
+	float dot(const Vec3& vec) const;
+
+	/// <summary>
+	/// Multiply the vector elemets by a scalar.
+	/// </summary>
+	/// <param name="scalar"></param>
+	Vec3 operator* (float scalar) const;
+
+	/// <summary>
+	/// Multiply the vector elemets by a scalar, in-place.
+	/// </summary>
+	/// <param name="scalar"></param>
+	Vec3& operator*= (float scalar);
+
+	/// <summary>
+	/// Debugging metod to print given vector.
+	/// </summary>
+	static void PrintVector(const Vec3& vec);
+
+	/// <summary>
+	/// Compute the vector product (eg. a vector perpendicular
+	/// to both given vectors) betwen the two vectors. Here these
+	/// are treated as 3D vectors.
+	/// </summary>
+	/// <param name="vec1"></param>
+	/// <param name="vec2"></param>
+	/// <returns></returns>
+	static Vec3 Cross3D(const Vec3& vec1, const Vec3& vec2);
+
+	/// <summary>
+	/// Calculates the euclidean distance in 3D to the other vector
+	/// </summary>
+	/// <param name="other"> Vector to calculate the distance to</param>
+	float Distance(const Vec3& other) const;
+
+	/// <summary>
+	/// Operator adding two vector together.
+	/// </summary>
+	/// <param name="vec1"></param>
+	/// <param name="vec2"></param>
+	/// <returns></returns>
+	friend Vec3 operator+ (Vec3 vec1, const Vec3& vec2);
+
+	/// <summary>
+	/// Operator for in-place addition of 2 vectors.
+	/// </summary>
+	/// <param name="other"></param>
+	/// <returns></returns>
+	Vec3& operator+= (const Vec3& other);
+
+	/// <summary>
+	/// Operator subtracting two vectors (result can be
+	/// interpreted as vector representing path from vec2 
+	/// to vec1)
+	/// <param name="vec1"></param>
+	/// <param name="vec2"></param>
+	/// <returns></returns>
+	friend Vec3 operator- (Vec3 vec1, const Vec3& vec2);
+
+	/// <summary>
+	/// Operator subtracting two vectors in place
+	/// <param name="other"></param>
+	/// <returns></returns>
+	Vec3& operator-= (const Vec3& other);
+};
+
+inline Vec3 operator* (float scalar, const Vec3& vec) {
 	return vec * scalar;
 }
 
