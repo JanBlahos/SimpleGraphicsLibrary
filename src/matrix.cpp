@@ -26,6 +26,17 @@ Vec3& Vec3::operator*= (float scalar) {
 	return *this;
 }
 
+Vec3 Vec3::operator* (const Vec3& other) const {
+	return Vec3{ x * other.x, y * other.y, z * other.z };
+}
+
+Vec3& Vec3::operator*= (const Vec3& other) {
+	x *= other.x;
+	y *= other.y;
+	z *= other.z;
+	return *this;
+}
+
 Vec3 Vec3::Cross3D(const Vec3& vec1, const Vec3& vec2) {
 	Vec3 result = Vec3(
 		vec1.y * vec2.z - (vec1.z * vec2.y),
@@ -41,6 +52,14 @@ float Vec3::Distance(const Vec3& other) const {
 	float dz = z - other.z;
 
 	return std::sqrt(dx * dx + dy * dy + dz * dz);
+}
+
+float Vec3::Distance2(const Vec3& other) const {
+	float dx = x - other.x;
+	float dy = y - other.y;
+	float dz = z - other.z;
+
+	return dx * dx + dy * dy + dz * dz;
 }
 
 Vec3 operator+ (Vec3 vec1, const Vec3& vec2) {

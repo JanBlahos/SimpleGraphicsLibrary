@@ -15,6 +15,7 @@
 
 //Would need to include math.h for PI constant
 constexpr float PI = 3.14159265358979323846f;
+constexpr float EulerConstant = 2.71828182845904523536f;
 
 typedef enum {
 	X_AXIS = 0,
@@ -201,6 +202,16 @@ public:
 	Vec3& operator*= (float scalar);
 
 	/// <summary>
+	/// Multiply the vector elements by each component.
+	/// </summary>
+	Vec3 Vec3::operator* (const Vec3& other) const;
+
+	/// <summary>
+	/// Multiply the vector elements by each component, in-place.
+	/// </summary>
+	Vec3& Vec3::operator*= (const Vec3& other);
+
+	/// <summary>
 	/// Debugging metod to print given vector.
 	/// </summary>
 	static void PrintVector(const Vec3& vec);
@@ -220,6 +231,13 @@ public:
 	/// </summary>
 	/// <param name="other"> Vector to calculate the distance to</param>
 	float Distance(const Vec3& other) const;
+
+	/// <summary>
+	/// Calculates the square of euclidean distance in 3D to the other vector,
+	/// cheaper than Distance()
+	/// </summary>
+	/// <param name="other"> Vector to calculate the distance to</param>
+	float Distance2(const Vec3& other) const;
 
 	/// <summary>
 	/// Operator adding two vector together.

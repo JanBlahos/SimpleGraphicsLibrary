@@ -78,11 +78,11 @@ Vec4 Context::BilinearInterpolation(
 void Context::ResolveOneRow(int r, const Vec3& bl_world, const Vec3& step_x, const Vec3& step_y, const Vec3& ray_origin) {
 	for (unsigned c = 0; c < win_width; ++c) {
 		Vec3 pixel_in_world = bl_world + (c * step_x) + (r * step_y);
-		Vec3 ray_direction = Vec4{ pixel_in_world.x - ray_origin.x, pixel_in_world.y - ray_origin.y, pixel_in_world.z - ray_origin.z };
+		Vec3 ray_direction = Vec3{ pixel_in_world.x - ray_origin.x, pixel_in_world.y - ray_origin.y, pixel_in_world.z - ray_origin.z };
 		ray_direction.normalize();
 
-		Color color = ComputePixelColor(ray_origin, ray_direction);
-		if (color.r == -1.0f) continue;
+		Color color;
+		if (!ComputePixelColor(ray_origin, ray_direction, color)) continue;
 
 		//setpixel uses x, y not row column, so column becomes x
 		SetPixelNoChecks(c, r, color);
@@ -113,8 +113,6 @@ void Context::RayTraceScene() {
 	Vec4 cam = Vec4{0.0f, 0.0f, 0.0f, 1.0f};
 
 	Matrix PVM_inv, Vp_inv;
-	//Matrix::InvertMatrix(PVM_matrix, PVM_inv);
-	//Matrix::InvertMatrix(Vp_matrix, Vp_inv);
 	Matrix VpPVM = Matrix::Matmul(Vp_matrix, PVM_matrix);
 
 	//transform camera
@@ -122,7 +120,6 @@ void Context::RayTraceScene() {
 	Matrix::InvertMatrix(VM, VM_inv);
 	Vec4 cam_t = Matrix::Matmul(VM_inv, cam);
 
-	//Matrix PVM_Vp_inv = Matrix::Matmul(PVM_inv, Vp_inv);
 	Matrix PVM_Vp_inv;
 	Matrix::InvertMatrix(VpPVM, PVM_Vp_inv);
 
@@ -156,22 +153,24 @@ void Context::RayTraceScene() {
 	thread_pool.WaitUntilFinished();
 };
 
-Color Context::ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_direction) {
+bool Context::ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_direction, Color& fragment_color) {
 	
 	int nearest_polygon = -1;
 	int nearest_sphere = -1;
 	float smallest_dist = std::numeric_limits<float>::max();
 	Vec3 nearest_intersection;
+	
+	float new_dist;
+	Vec3 intersection;
 
 	for (unsigned long i = 0; i < sphere_buffer.size(); ++i) {
 		const auto& sphere = sphere_buffer[i];
 
-		Vec3 intersection;
 		if (!RaySphereIntersection(ray_origin, ray_direction, sphere, intersection)) continue;
 
-		float new_dist = intersection.Distance(ray_origin);
+		new_dist = intersection.Distance2(ray_origin);
 
-		if (new_dist > 0.0f && new_dist < smallest_dist) {
+		if (new_dist < smallest_dist) {
 			smallest_dist = new_dist;
 			nearest_sphere = i;
 			nearest_intersection = intersection;
@@ -180,18 +179,12 @@ Color Context::ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_directi
 
 	for (unsigned long i = 0; i < primitive_buffer.size(); ++i) {
 		const auto& primitive = primitive_buffer[i];
-		
-		if (primitive.points.size() != 3) {
-			throw SGLInvalidOperationException("Primitives other than triangles"
-				"are currently not supported");
-		}
 
-		Vec3 intersection;
 		if (!RayTriangleIntersection(ray_origin, ray_direction, primitive, intersection)) continue;
 
-		float new_dist = intersection.Distance(ray_origin);
+		new_dist = intersection.Distance2(ray_origin);
 
-		if (new_dist > 0.0f && new_dist < smallest_dist) {
+		if (new_dist < smallest_dist) {
 			smallest_dist = new_dist;
 			nearest_polygon = i;
 			nearest_intersection = intersection;
@@ -199,12 +192,8 @@ Color Context::ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_directi
 		}
 	}
 
-	Color fragment_color;
-
 	if (nearest_sphere == -1 && nearest_polygon == -1) { //no intersection
-		//return invalid color
-		fragment_color = Color{-1.0f, -1.0f, -1.0f};
-
+		return false;
 	} else if (nearest_polygon == -1) { //sphere
 		const auto& intersected_sphere = sphere_buffer[nearest_sphere];
 
@@ -216,7 +205,7 @@ Color Context::ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_directi
 		fragment_color = ComputeLighting(ray_origin, nearest_intersection, materials.at(intersected_triangle.mat_idx), GetNormalizedNormal(intersected_triangle, ray_origin));
 	}
 
-	return fragment_color;
+	return true;
 }
 
 Vec3 Context::GetNormalizedNormal(const Sphere& sphere, const Vec3& intersection) {
@@ -296,8 +285,6 @@ bool Context::RayTriangleIntersection(const Vec3& ray_origin, const Vec3& ray_di
 };
 
 bool Context::RaySphereIntersection(const Vec3& ray_origin, const Vec3& ray_direction, const Sphere& sphere, Vec3& intersection) {
-	Vec4 failed_intersection = Vec4{ 0.0f, 0.0f, 0.0f, -1.0f };
-
 	// implementation of geometric solution found here:
 	// https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection.html
 	// check Figure 1 for better understanding of the code
@@ -340,12 +327,24 @@ bool Context::RaySphereIntersection(const Vec3& ray_origin, const Vec3& ray_dire
 	return true;
 };
 
+float ComputeTan(const Vec3& N, const Vec3& H) { 
+	float n_dot_h = N.dot(H);
+	float cos_theta = std::max(n_dot_h, 0.0f);
+	float sin_theta = std::sqrt(1.0f - cos_theta * cos_theta);
+	// avoid division by zero
+	return (cos_theta > 0.0f) ? (sin_theta / cos_theta) : std::numeric_limits<float>::max();
+}
+
 Color Context::ComputeLighting(const Vec3& ray_origin, const Vec3& intersection, const Material& material, const Vec3& surface_normal) {
+
+#ifdef PHONG_LIGHTING
 
 	//Phong
 	Color color = Color{ 0.0f, 0.0f, 0.0f };
 	const Vec3& N = surface_normal;
-	
+	Vec3 E = ray_origin - intersection;
+	E.normalize();
+
 	for (auto& light : point_lights) {
 		//diffuse reflection
 		Vec3 light_pos = Vec3{ light.x, light.y, light.z };
@@ -356,8 +355,6 @@ Color Context::ComputeLighting(const Vec3& ray_origin, const Vec3& intersection,
 
 		//specular reflection
 		Vec3 R = (2 * cos_alpha * N) - L;
-		Vec3 E = ray_origin - intersection;
-		E.normalize();
 		float cos_beta_sh = std::pow(std::max(R.dot(E), 0.0f), material.shine);
 
 		//combine the components together
@@ -365,6 +362,73 @@ Color Context::ComputeLighting(const Vec3& ray_origin, const Vec3& intersection,
 		color.g += (light.g * material.g * material.kd * cos_alpha) + (light.g * material.ks * cos_beta_sh);
 		color.b += (light.b * material.b * material.kd * cos_alpha) + (light.b * material.ks * cos_beta_sh);
 	}
+
+#endif // PHONG_LIGHTING
+
+#ifndef PHONG_LIGHTING
+
+	// attempt at Cook-Torrance microfacet model,
+	// specular component doesn't seem to work
+
+	// uncomment PHONG_LIGHTING in context.h, material roughness can
+	// also be set there since it is not given
+
+	Vec3 color_v = Vec3 { 0.0f, 0.0f, 0.0f };
+	const Vec3& N = surface_normal;
+	Vec3 material_color = Vec3{ material.r, material.g, material.b };
+	Vec3 V = ray_origin - intersection;
+	V.normalize();
+	for (auto& light : point_lights) {
+		Vec3 light_pos = Vec3{ light.x, light.y, light.z };
+		Vec3 light_color = Vec3{ light.r, light.g, light.b };
+		Vec3 L = light_pos - intersection;
+		L.normalize();
+		//half-way vector between viewer and light
+		Vec3 H = L + V;
+		H.normalize();
+
+		float n_dot_v = N.dot(V);
+		float v_dot_h = V.dot(H);
+		float h_dot_n = H.dot(N);
+		float n_dot_l = N.dot(L);
+
+		n_dot_v = std::max(0.0f, n_dot_v);
+		v_dot_h = std::max(0.0f, v_dot_h);
+		h_dot_n = std::max(0.0f, h_dot_n);
+		n_dot_l = std::max(0.0f, n_dot_l);
+
+		if (n_dot_l <= 0.0f || n_dot_v <= 0.0f) {
+			continue;
+		}
+
+		//distribution, geometric attenuation and fresnel
+		float D, G, F;
+
+		//D
+		float alpha = COOK_TORRANCE_ROUGHNESS;
+		D = std::pow(EulerConstant, -(std::pow(ComputeTan(N, H) / alpha, 2)) ) / (PI * alpha * alpha * std::pow(h_dot_n, 4));
+
+		//G
+		float two_hn_vh = 2 * h_dot_n * (1.0f / v_dot_h);
+		G = std::min(1.0f, std::min(two_hn_vh * n_dot_l, two_hn_vh * n_dot_v));
+
+		//F
+		float F0 = (material.ior - 1.0f) / (material.ior + 1.0f);
+		F0 *= F0;
+		F = F0 + (1.0f - F0) * std::pow((1.0f - v_dot_h), 5);
+
+		//fr
+		float fr = (D * G * F) / (4.0f * n_dot_l * n_dot_v);
+
+		float specular = material.ks * fr;
+		Vec3 diffuse = material.kd * material_color * (1.0f / PI);
+
+		color_v += light_color * n_dot_l * (diffuse + Vec3{specular, specular, specular});
+	}
+
+	Color color = Color{color_v.x, color_v.y, color_v.z};
+
+#endif // !PHONG_LIGHTING
 
 	return color;
 };

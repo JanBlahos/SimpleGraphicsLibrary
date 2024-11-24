@@ -17,6 +17,14 @@
 #define USE_INCREMENTAL_ERROR false
 #define MAX_VERTICES 100
 
+#define PHONG_LIGHTING //comment this line for cook-torrance model instead
+
+// roughness isnt specified for given materials, therefore
+// we allow to set it here for the whole scene. note that
+// roughness 0 models ideal smooth surface and 1 maximum
+// roughnesss
+#define COOK_TORRANCE_ROUGHNESS 0.5f
+
 typedef struct {
 	//int y_upper;
 	int y_lower;
@@ -50,13 +58,6 @@ typedef struct {
 	int y;
 	float z;
 } Point3D;
-
-//typedef struct {
-//	float x;
-//	float y;
-//	float z;
-//	float w;
-//} Point4D;
 
 typedef struct {
 	const float r;
@@ -381,7 +382,7 @@ private:
 	/// </summary>
 	/// <param name="ray_origin"> Where the ray is cast from</param>
 	/// <param name="ray_direction"> Normalized direction vector</param>
-	Color ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_direction);
+	bool ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_direction, Color& fragment_color);
 
 	/// <summary>
 	/// Computes a surface normal for sphere
