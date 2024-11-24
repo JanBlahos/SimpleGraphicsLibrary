@@ -204,12 +204,12 @@ public:
 	/// <summary>
 	/// Multiply the vector elements by each component.
 	/// </summary>
-	Vec3 Vec3::operator* (const Vec3& other) const;
+	Vec3 operator* (const Vec3& other) const;
 
 	/// <summary>
 	/// Multiply the vector elements by each component, in-place.
 	/// </summary>
-	Vec3& Vec3::operator*= (const Vec3& other);
+	Vec3& operator*= (const Vec3& other);
 
 	/// <summary>
 	/// Debugging metod to print given vector.
