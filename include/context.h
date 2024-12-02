@@ -83,6 +83,7 @@ typedef struct {
 	unsigned long long mat_idx;
 	std::array<Vec3, 3> points; //triangles only, should use
 								// vector for general polygon
+	Vec3 normal;
 	//std::vector<Vec4> points;
 } Polygon;
 
@@ -414,7 +415,7 @@ private:
 	/// Computes a surface normal for polygon
 	/// </summary>
 	/// <param name="polygon"> Input polygon</param>
-	Vec3 GetNormalizedNormal(const Polygon& polygon, const Vec3& ray_origin);
+	Vec3 GetNormalizedNormal(const Polygon& polygon);
 
 	/// <summary>
 	/// Bilinearly interpolates, starting between bl, br and tl, tr

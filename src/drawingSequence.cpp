@@ -62,6 +62,9 @@ void Context::EndDrawing() {
 			}
 		}
 	}
+	else {
+		primitive_buffer.back().normal = GetNormalizedNormal(primitive_buffer.back());
+	}
 	is_drawing = false;
 	//std::cout << "end drawing\n";
 };

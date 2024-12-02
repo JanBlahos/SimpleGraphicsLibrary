@@ -194,6 +194,10 @@ std::pair<Vec3, std::pair<sglIntersectionType, int>> Context::RayIntersection(co
 			throw SGLInvalidOperationException("Primitives other than triangles"
 				"are currently not supported");
 		}
+		/// backface culling
+		if (primitive.normal.dot(ray_direction) >= -epsilon && !shadow_ray) {
+			continue;
+		}
 
 		float t = RayTriangleIntersection(ray_origin, ray_direction, primitive);
 		if (t <= epsilon) continue;
@@ -243,7 +247,7 @@ switch(intersection_type) {
 	case TRIANGLE:
 	{
 		const auto& intersected_triangle = primitive_buffer[idx];
-		fragment_color = ComputeLighting(ray_origin, nearest_intersection, materials.at(intersected_triangle.mat_idx), GetNormalizedNormal(intersected_triangle, ray_origin));
+		fragment_color = ComputeLighting(ray_origin, nearest_intersection, materials.at(intersected_triangle.mat_idx),intersected_triangle.normal);
 		break;
 	}		
 		
@@ -258,19 +262,19 @@ Vec3 Context::GetNormalizedNormal(const Sphere& sphere, const Vec3& intersection
 	return normal;
 }
 
-Vec3 Context::GetNormalizedNormal(const Polygon& polygon, const Vec3& ray_origin) {
+Vec3 Context::GetNormalizedNormal(const Polygon& polygon) {
 	const Vec3& p0 = polygon.points[0];
 	const Vec3& p1 = polygon.points[1];
 	const Vec3& p2 = polygon.points[2];
-	Vec3 normal = Vec3::Cross3D(p1 - p0, p1 - p2);
+	Vec3 normal = Vec3::Cross3D(p1 - p0, p2 - p0);
 
 	//flip if facing away, no polygon orientation defined (ccw/cw)
-	Vec3 dir_towards_camera = ray_origin - p0;
-	dir_towards_camera.normalize();
+	//Vec3 dir_towards_camera = ray_origin - p0;
+	//dir_towards_camera.normalize();
 	normal.normalize();
-	if (normal.dot(dir_towards_camera) < 0) {
+	/*if (normal.dot(dir_towards_camera) < 0) {
 		normal = Vec3{-normal.x, -normal.y, -normal.z};
-	}
+	} */
 
 	return normal;
 }
