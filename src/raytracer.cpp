@@ -85,6 +85,7 @@ void Context::ResolveOneRow(int r, const Vec3& bl_world, const Vec3& step_x, con
 		if (!ComputePixelColor(ray_origin, ray_direction, color)) continue;
 
 		//setpixel uses x, y not row column, so column becomes x
+		//std::cout << "Setting pixel " << c << "," << r << std::endl;
 		SetPixelNoChecks(c, r, color);
 	}
 }
@@ -149,30 +150,39 @@ void Context::RayTraceScene() {
 		thread_pool.enqueue([&, r, bl_t, step_x, step_y, ray_origin]() {
 			ResolveOneRow(r, bl_t, step_x, step_y, ray_origin);
 		});
+
+		//ResolveOneRow(r, bl_t, step_x, step_y, ray_origin);
 	}
 	thread_pool.WaitUntilFinished();
 };
 
-bool Context::ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_direction, Color& fragment_color) {
-	
-	int nearest_polygon = -1;
-	int nearest_sphere = -1;
+std::pair<Vec3, std::pair<sglIntersectionType, int>> Context::RayIntersection(const Vec3& ray_origin, const Vec3& ray_direction, bool shadow_ray) {
+	//int nearest_polygon = -1;
+	//int nearest_sphere = -1;
 	float smallest_dist = std::numeric_limits<float>::max();
-	Vec3 nearest_intersection;
-	
-	float new_dist;
-	Vec3 intersection;
+	constexpr float epsilon = std::numeric_limits<float>::epsilon();
+	Vec3 nearest_intersection = Vec4{ 0.0f, 0.0f, 0.0f, -1.0f };
+	sglIntersectionType intersection_type = NO_INTERSECTION;
+	int idx = -1;
 
 	for (unsigned long i = 0; i < sphere_buffer.size(); ++i) {
 		const auto& sphere = sphere_buffer[i];
 
-		if (!RaySphereIntersection(ray_origin, ray_direction, sphere, intersection)) continue;
+		float t  = RaySphereIntersection(ray_origin, ray_direction, sphere);
+		if (t <= epsilon) continue;
+		Vec3 intersection = ray_origin + (Vec3(ray_direction.x * t, ray_direction.y * t, ray_direction.z * t));
+		if (shadow_ray && t <= 1.0f - epsilon) {
+			continue;
+			/*std::cout << "Found sphere intersection at t " << t << std::endl;
+			return std::make_pair(intersection, std::make_pair(SPHERE, i));*/
+		}
+		float new_dist = intersection.Distance(ray_origin);
 
-		new_dist = intersection.Distance2(ray_origin);
-
-		if (new_dist < smallest_dist) {
+		if (new_dist > 0.0f && new_dist < smallest_dist) {
 			smallest_dist = new_dist;
-			nearest_sphere = i;
+			//nearest_sphere = i;
+			idx = i;
+			intersection_type = SPHERE;
 			nearest_intersection = intersection;
 		}
 	}
@@ -180,31 +190,64 @@ bool Context::ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_directio
 	for (unsigned long i = 0; i < primitive_buffer.size(); ++i) {
 		const auto& primitive = primitive_buffer[i];
 
-		if (!RayTriangleIntersection(ray_origin, ray_direction, primitive, intersection)) continue;
+		if (primitive.points.size() != 3) {
+			throw SGLInvalidOperationException("Primitives other than triangles"
+				"are currently not supported");
+		}
 
-		new_dist = intersection.Distance2(ray_origin);
+		float t = RayTriangleIntersection(ray_origin, ray_direction, primitive);
+		if (t <= epsilon) continue;
+		//std::cout << "T " << t << std::endl;
+		Vec3 intersection = ray_origin + (Vec3(ray_direction.x * t, ray_direction.y * t, ray_direction.z * t));
+		if (shadow_ray && (t <= 1.0f - epsilon)) {
+			continue;
+			/*std::cout << "Found triangle intersection at t " << t << std::endl;
+			return std::make_pair(intersection, std::make_pair(TRIANGLE, i));*/
+		}
+		float new_dist = intersection.Distance(ray_origin);
 
-		if (new_dist < smallest_dist) {
+		if (new_dist > 0.0f && new_dist < smallest_dist) {
 			smallest_dist = new_dist;
-			nearest_polygon = i;
+			//nearest_polygon = i;
 			nearest_intersection = intersection;
-			nearest_sphere = -1; //don't consider spheres anymore
+			//nearest_sphere = -1; //don't consider spheres anymore
+			idx = i;
+			intersection_type = TRIANGLE;
 		}
 	}
+	return std::make_pair(nearest_intersection, std::make_pair(intersection_type, idx));
+}
 
-	if (nearest_sphere == -1 && nearest_polygon == -1) { //no intersection
+bool Context::ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_direction, Color& fragment_color) {
+	
+auto intersection_data = RayIntersection(ray_origin, ray_direction, false);
+auto nearest_intersection = intersection_data.first;
+auto intersection_type = intersection_data.second.first;
+int idx = intersection_data.second.second;
+
+switch(intersection_type) {
+	case NO_INTERSECTION:
+	{
+		fragment_color = Color{ -1.0f, -1.0f, -1.0f };
 		return false;
-	} else if (nearest_polygon == -1) { //sphere
-		const auto& intersected_sphere = sphere_buffer[nearest_sphere];
-
+	}
+	case SPHERE:
+	{
+		const auto& intersected_sphere = sphere_buffer[idx];
 		//need at least intersection point, primitive material, surface normal
 		// (cross for triangle or subtract center for sphere, normalize!!!)
 		fragment_color = ComputeLighting(ray_origin, nearest_intersection, materials.at(intersected_sphere.mat_idx), GetNormalizedNormal(intersected_sphere, nearest_intersection));
-	} else { //triangle
-		const auto& intersected_triangle = primitive_buffer[nearest_polygon];
-		fragment_color = ComputeLighting(ray_origin, nearest_intersection, materials.at(intersected_triangle.mat_idx), GetNormalizedNormal(intersected_triangle, ray_origin));
+		break;
 	}
-
+		
+	case TRIANGLE:
+	{
+		const auto& intersected_triangle = primitive_buffer[idx];
+		fragment_color = ComputeLighting(ray_origin, nearest_intersection, materials.at(intersected_triangle.mat_idx), GetNormalizedNormal(intersected_triangle, ray_origin));
+		break;
+	}		
+		
+}
 	return true;
 }
 
@@ -232,7 +275,7 @@ Vec3 Context::GetNormalizedNormal(const Polygon& polygon, const Vec3& ray_origin
 	return normal;
 }
 
-bool Context::RayTriangleIntersection(const Vec3& ray_origin, const Vec3& ray_direction, const Polygon& primitive, Vec3& intersection) {
+float Context::RayTriangleIntersection(const Vec3& ray_origin, const Vec3& ray_direction, const Polygon& primitive) {
 
 	// Moller-Trumbore intersection algorithm implementation
 	// https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
@@ -248,12 +291,12 @@ bool Context::RayTriangleIntersection(const Vec3& ray_origin, const Vec3& ray_di
 	// these represent determinants of the
 	// linear equation system
 	// because Moller-Trumbore algorithm
-	// uses Cramer´s rule to find solutions
+	// uses CramerÂ´s rule to find solutions
 
 	float det = e1.dot(ray_cross_e2);
 
 	if (std::abs(det) < epsilon) { // parallel
-		return false;
+		return 0.0f;
 	}
 
 	float inv_det = 1.0f / det;
@@ -262,7 +305,7 @@ bool Context::RayTriangleIntersection(const Vec3& ray_origin, const Vec3& ray_di
 	float u = inv_det * s.dot(ray_cross_e2);
 
 	if ((u < 0 && std::abs(u) > epsilon) || (u > 1 && std::abs(u - 1) > epsilon)) {
-		return false;
+		return 0.0f;
 	}
 
 	Vec3 s_cross_e1 = Vec3::Cross3D(s, e1);
@@ -271,20 +314,16 @@ bool Context::RayTriangleIntersection(const Vec3& ray_origin, const Vec3& ray_di
 	float v = inv_det * ray_direction.dot(s_cross_e1);
 
 	if ((v < 0 && std::abs(v) > epsilon) || (u + v > 1 && std::abs(u + v - 1) > epsilon)) {
-		return false;
+		return 0.0f;
 	}
 	// t parameter representing the coefficient of ray direction
 	float t = inv_det * e2.dot(s_cross_e1);
 
-	if (t <= epsilon) {
-		return false;
-	}
-
-	intersection = ray_origin + (Vec3(ray_direction.x * t, ray_direction.y * t, ray_direction.z * t));
-	return true;
+	return t;
 };
 
-bool Context::RaySphereIntersection(const Vec3& ray_origin, const Vec3& ray_direction, const Sphere& sphere, Vec3& intersection) {
+float Context::RaySphereIntersection(const Vec3& ray_origin, const Vec3& ray_direction, const Sphere& sphere) {
+
 	// implementation of geometric solution found here:
 	// https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection.html
 	// check Figure 1 for better understanding of the code
@@ -296,14 +335,14 @@ bool Context::RaySphereIntersection(const Vec3& ray_origin, const Vec3& ray_dire
 	float tca = L.dot(ray_direction);
 
 	if (tca < 0) {
-		return false;
+		return -1.0f;
 	}
 
 	//compare squared dist to avoid sqrt computation
 	float d2 = L.dot(L) - tca*tca;
 
 	if (d2 > sphere.radius * sphere.radius) {
-		return false;
+		return -1.0f;
 	}
 
 	float thc = std::sqrt(sphere.radius*sphere.radius - d2);
@@ -317,14 +356,10 @@ bool Context::RaySphereIntersection(const Vec3& ray_origin, const Vec3& ray_dire
 	float t;
 	if (t0 < 0) {
 		t0 = t1;
-		if (t0 < 0) {
-			return false;
-		};
 	}
 	t = t0;
 
-	intersection = ray_origin + (Vec3(ray_direction.x * t, ray_direction.y * t, ray_direction.z * t));
-	return true;
+	return t;
 };
 
 float ComputeTan(const Vec3& N, const Vec3& H) { 
@@ -346,10 +381,17 @@ Color Context::ComputeLighting(const Vec3& ray_origin, const Vec3& intersection,
 	E.normalize();
 
 	for (auto& light : point_lights) {
-		//diffuse reflection
+		///Cast a shadow ray and check whether the light is not shadowed
 		Vec3 light_pos = Vec3{ light.x, light.y, light.z };
 		Vec3 L = light_pos - intersection;
 		L.normalize();
+		auto masking_intesection_info = RayIntersection(intersection, L, true);
+		/// If any intersection was found this light is shadowed by some object. It does not contribute
+		if (masking_intesection_info.second.first > NO_INTERSECTION) {
+			//std::cout << "Skipping light" << std::endl;
+			continue;
+		}
+		//diffuse reflection
 		float cos_alpha = L.dot(N);
 		cos_alpha = std::max(cos_alpha, 0.0f);
 

@@ -94,6 +94,13 @@ typedef struct {
 	unsigned long long mat_idx;
 } Sphere;
 
+typedef enum  {
+	NO_INTERSECTION = 0,
+	SPHERE,
+	TRIANGLE
+	
+} sglIntersectionType;
+
 /// <summary>
 /// Class handling matrix stacks and rasterization calls
 /// </summary>
@@ -385,6 +392,18 @@ private:
 	bool ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_direction, Color& fragment_color);
 
 	/// <summary>
+	/// Finds the nearest object intersecting with the ray if there is such
+	/// </summary>
+	/// <param name="ray_origin"> Where the ray is cast from </param>
+	/// <param name="ray_direction"> Normalized direction vector</param>
+	/// <param name="shadow_ray"> Whether the ray is a shadow ray. If so, terminate immediately after
+	/// finding the first intersection with parameter t in range (0, 1)</param>
+	/// <returns> A pair where the first component is the intersection point.
+	/// (has -1 in w component if no intersection) and the second is an intersection_type
+	/// /index to the corresponding buffer pair</returns>
+	std::pair<Vec3, std::pair<sglIntersectionType, int>> RayIntersection(const Vec3& ray_origin, const Vec3& ray_direction, bool shadow_ray);
+
+	/// <summary>
 	/// Computes a surface normal for sphere
 	/// </summary>
 	/// <param name="sphere"> Input sphere for center coords</param>
@@ -418,16 +437,16 @@ private:
 	void ResolveOneRow(int r, const Vec3& bl_world, const Vec3& step_x, const Vec3& step_y, const Vec3& ray_origin);
 
 	/// <summary>
-	/// Computes a ray-triangle intersection if it exists, returns
-	/// -1 in w component otherwise
+	/// Computes a ray-triangle intersection, returns the
+	/// t parameter for ray_direction (if it is smaller than zero intersection was not found)
 	/// </summary>
-	bool RayTriangleIntersection(const Vec3& ray_origin, const Vec3& ray_direction, const Polygon& primitive, Vec3& intersection);
+	float RayTriangleIntersection(const Vec3& ray_origin, const Vec3& ray_direction, const Polygon& primitive);
 
 	/// <summary>
-	/// Computes a ray-sphere intersection if it exists, returns
-	/// -1 in w component otherwise
+	/// Computes a ray-sphere intersection, returns the
+	/// t parameter for ray_direction (if it is smaller than zero intersection was not found)
 	/// </summary>
-	bool RaySphereIntersection(const Vec3& ray_origin, const Vec3& ray_direction, const Sphere& sphere, Vec3& intersection);
+	float RaySphereIntersection(const Vec3& ray_origin, const Vec3& ray_direction, const Sphere& sphere);
 
 	/// <summary>
 	/// Calculates lighting for fragment in world coords
