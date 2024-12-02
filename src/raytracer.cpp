@@ -97,6 +97,7 @@ void Context::RayTraceScene() {
 	else if (is_setting_scene) {
 		throw SGLInvalidOperationException("RayTraceScene called inside BeginScene-EndScene sequence");
 	}
+	//auto temp_color_buffer = std::vector<float>(win_width * win_height * 3, 0);
 
 	//fetch matrices, BeginScene() does this but isn't called for
 	//sphere-only scenes
@@ -145,6 +146,7 @@ void Context::RayTraceScene() {
 	Vec3 step_x = (br_t - bl_t) * (1.0f / (win_width - 1));
 	Vec3 step_y = (tl_t - bl_t) * (1.0f / (win_height - 1));
 
+	//First pass. Compute lighting for each pixel
 	for (unsigned r = 0; r < win_height; ++r) {
 
 		thread_pool.enqueue([&, r, bl_t, step_x, step_y, ray_origin]() {
@@ -154,6 +156,7 @@ void Context::RayTraceScene() {
 		//ResolveOneRow(r, bl_t, step_x, step_y, ray_origin);
 	}
 	thread_pool.WaitUntilFinished();
+	//Second pass. Perform the path tracing of reflected/refracted rays.
 };
 
 std::pair<Vec3, std::pair<sglIntersectionType, int>> Context::RayIntersection(const Vec3& ray_origin, const Vec3& ray_direction, bool shadow_ray) {
@@ -221,6 +224,62 @@ std::pair<Vec3, std::pair<sglIntersectionType, int>> Context::RayIntersection(co
 	}
 	return std::make_pair(nearest_intersection, std::make_pair(intersection_type, idx));
 }
+Vec3 Context::Reflect(const Vec3& N, const Vec3& L) {
+	float cos_alpha = L.dot(N);
+	cos_alpha = std::max(cos_alpha, 0.0f);
+	Vec3 R = (2 * cos_alpha * N) - L;
+	return R;
+}
+
+//bool Context::TracePixelColor(const Vec3& ray_origin, const Vec3& ray_direction, Color& current_color, std::vector<float> temp_color_buffer, int recursion_depth) {
+//	if (recursion_depth == PATH_TRACING_RECURSION_DEPTH) {
+//		return false;
+//	}
+//	auto intersection_data = RayIntersection(ray_origin, ray_direction, false);
+//	auto nearest_intersection = intersection_data.first;
+//	auto intersection_type = intersection_data.second.first;
+//	int idx = intersection_data.second.second;
+//	Vec3 L = ray_origin - nearest_intersection;
+//	L.normalize();
+//	Vec3 N;
+//	float ks = 0.0f;
+//	switch (intersection_type) {
+//	case NO_INTERSECTION:
+//	{
+//		return false;
+//	}
+//	case SPHERE:
+//	{
+//		const auto& intersected_sphere = sphere_buffer[idx];
+//		Vec3 N = GetNormalizedNormal(intersected_sphere, nearest_intersection);
+//		ks = materials.at(intersected_sphere.mat_idx).ks;
+//		
+//		break;
+//	}
+//
+//	case TRIANGLE:
+//	{
+//		const auto& intersected_triangle = primitive_buffer[idx];
+//		Vec3 N = intersected_triangle.normal;
+//		ks = materials.at(intersected_triangle.mat_idx).ks;
+//		break;
+//	}
+//
+//	}
+//	unsigned intersection_pixel_idx = BufferIdxFromWorld(Vec4{ nearest_intersection.x, nearest_intersection.y, nearest_intersection.z, 1.0f });
+//	// if this is the starting point itself dont multiply by color again only by the specular cooficient
+//	current_color.r *= ks;
+//	current_color.g *= ks;
+//	current_color.b *= ks;
+//	if (recursion_depth > 0) {
+//		current_color.r *= temp_color_buffer[intersection_pixel_idx];
+//		current_color.b *= temp_color_buffer[intersection_pixel_idx + 1];
+//		current_color.b *= temp_color_buffer[intersection_pixel_idx + 2];
+//	}
+//	TracePixelColor(nearest_intersection, Reflect(N, L), current_color, temp_color_buffer, recursion_depth + 1);
+//	return true;
+//
+//}
 
 bool Context::ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_direction, Color& fragment_color) {
 	
@@ -373,6 +432,59 @@ float ComputeTan(const Vec3& N, const Vec3& H) {
 	// avoid division by zero
 	return (cos_theta > 0.0f) ? (sin_theta / cos_theta) : std::numeric_limits<float>::max();
 }
+Color Context::GetReflectedColor(const Vec3& ray_origin, const Vec3& intersection, const Material& material, const Vec3& surface_normal, int recursion_depth) {
+	Vec3 E = ray_origin - intersection;
+	Color color = { 0.0f, 0.0f, 0.0f };
+	if (recursion_depth == PATH_TRACING_RECURSION_DEPTH - 1) {
+		return color;
+	}
+	for (auto& light : point_lights) {
+		Vec3 light_pos = Vec3{ light.x, light.y, light.z };
+		Vec3 L = light_pos - intersection;//diffuse reflection
+		L.normalize();
+		Vec3 R = Reflect(surface_normal, L);
+		float cos_beta_sh = std::pow(std::max(R.dot(E), 0.0f), material.shine);
+		auto masking_intesection_info = RayIntersection(intersection, L, true);
+		/// If any intersection was found this light is shadowed by some object. It does not contribute
+		if (masking_intesection_info.second.first > NO_INTERSECTION) {
+			//std::cout << "Skipping light" << std::endl;
+			continue;
+		}
+		auto reflected_intesection_info = RayIntersection(intersection, R, false);
+		auto intersection_type = reflected_intesection_info.second.first;
+		auto idx = reflected_intesection_info.second.second;
+		auto nearest_intersection = reflected_intesection_info.first;
+		Color incoming_color = { 0.0f, 0.0f, 0.0f };
+		// get secondary light incoming from R direction
+		switch (intersection_type) {
+			case NO_INTERSECTION:
+			{
+				break;
+			}
+			case SPHERE:
+			{
+				const auto& intersected_sphere = sphere_buffer[idx];
+				incoming_color = GetReflectedColor(intersection, nearest_intersection, 
+					materials.at(intersected_sphere.mat_idx), GetNormalizedNormal(intersected_sphere, nearest_intersection), recursion_depth + 1);
+				break;
+			}
+
+			case TRIANGLE:
+			{
+				const auto& intersected_triangle = primitive_buffer[idx];
+				incoming_color = GetReflectedColor(intersection, nearest_intersection, 
+					materials.at(intersected_triangle.mat_idx), intersected_triangle.normal, recursion_depth + 1);
+				break;
+			}
+		}
+		///Compute only the specular part since that will be reflected
+		color.r += (light.r * material.ks * cos_beta_sh) + incoming_color.r;
+		color.g += (light.g * material.ks * cos_beta_sh) + incoming_color.g;
+		color.b += (light.b * material.ks * cos_beta_sh) + incoming_color.b;
+
+	}
+	return color;
+}
 
 Color Context::ComputeLighting(const Vec3& ray_origin, const Vec3& intersection, const Material& material, const Vec3& surface_normal) {
 
@@ -384,30 +496,34 @@ Color Context::ComputeLighting(const Vec3& ray_origin, const Vec3& intersection,
 	Vec3 E = ray_origin - intersection;
 	E.normalize();
 
+	//do the specular reflection separately as a part of the reflected light
+	Color specular_color = GetReflectedColor(ray_origin, intersection, material, surface_normal, 0);
+
 	for (auto& light : point_lights) {
 		///Cast a shadow ray and check whether the light is not shadowed
 		Vec3 light_pos = Vec3{ light.x, light.y, light.z };
-		Vec3 L = light_pos - intersection;
+		Vec3 L = light_pos - intersection;//diffuse reflection
 		L.normalize();
+		float cos_alpha = L.dot(N);
+		cos_alpha = std::max(cos_alpha, 0.0f);
+
+		//Vec3 R = (2 * cos_alpha * N) - L;
+		//float cos_beta_sh = std::pow(std::max(R.dot(E), 0.0f), material.shine);
 		auto masking_intesection_info = RayIntersection(intersection, L, true);
 		/// If any intersection was found this light is shadowed by some object. It does not contribute
 		if (masking_intesection_info.second.first > NO_INTERSECTION) {
 			//std::cout << "Skipping light" << std::endl;
 			continue;
 		}
-		//diffuse reflection
-		float cos_alpha = L.dot(N);
-		cos_alpha = std::max(cos_alpha, 0.0f);
-
-		//specular reflection
-		Vec3 R = (2 * cos_alpha * N) - L;
-		float cos_beta_sh = std::pow(std::max(R.dot(E), 0.0f), material.shine);
 
 		//combine the components together
-		color.r += (light.r * material.r * material.kd * cos_alpha) + (light.r * material.ks * cos_beta_sh);
-		color.g += (light.g * material.g * material.kd * cos_alpha) + (light.g * material.ks * cos_beta_sh);
-		color.b += (light.b * material.b * material.kd * cos_alpha) + (light.b * material.ks * cos_beta_sh);
+		color.r += (light.r * material.r * material.kd * cos_alpha);
+		color.g += (light.g * material.g * material.kd * cos_alpha);
+		color.b += (light.b * material.b * material.kd * cos_alpha);
 	}
+	color.r += specular_color.r;
+	color.g += specular_color.g;
+	color.b += specular_color.b;
 
 #endif // PHONG_LIGHTING
 

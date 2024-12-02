@@ -16,6 +16,7 @@
 #define QUADRANT_SEGMENTS 10
 #define USE_INCREMENTAL_ERROR false
 #define MAX_VERTICES 100
+#define PATH_TRACING_RECURSION_DEPTH 8
 
 #define PHONG_LIGHTING //comment this line for cook-torrance model instead
 
@@ -377,12 +378,28 @@ private:
 	unsigned Pixel2Index(unsigned x, unsigned y);
 
 	/// <summary>
+	/// Returns the idx in color buffer for a given point in world coordinates.
+	/// Call only when drawing or raytracing scene to get correct results.
+	/// </summary>
+	/// <param name="point"> Point in world coordinates </param>
+	/// <returns></returns>
+	//unsigned BufferIdxFromWorld(const Vec4& point);
+
+	/// <summary>
 	/// Attempts to draw a point into color buffer
 	/// </summary>
 	/// <param name="x1"> Point x coordinate</param>
 	/// <param name="y1"> Point y coordinate</param>
 	/// <param name="depth"> Depth for zbuffer</param>
 	void DrawPoint(int x1, int y1, float depth);
+
+	/// <summary>
+	/// Reflects a ray along a normal
+	/// </summary>
+	/// <param name="N"> Normalized surface normal</param>
+	/// <param name="L"> Normalized direction to the ray origin from the surface</param>
+	/// <returns></returns>
+	Vec3 Reflect(const Vec3& N, const Vec3& L);
 
 	/// <summary>
 	/// Computes pixel color by casting a ray and finding an intersection
@@ -393,12 +410,23 @@ private:
 	bool ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_direction, Color& fragment_color);
 
 	/// <summary>
+	/// Perform path tracing from the current intersection
+	/// </summary>
+	/// <param name="ray_origin"> Where the ray is cast from</param>
+	/// <param name="ray_direction"> Normalized ray direction</param>
+	/// <param name="current_color"> Current color of the secondary ray. Initialize as {1, 1, 1} from the starting point</param>
+	/// <param name="temp_color_buffer"> Buffer containing lighting computed from the first pass of raytracing</param>
+	/// <param name="recursion_depth"> How many reflections were already performed. Used to terminate after  PATH_TRACING RECURSION DEPTH</param>
+	/// <returns></returns>
+	//bool TracePixelColor(const Vec3& ray_origin, const Vec3& ray_direction, Color& current_color, std::vector<float> temp_color_buffer, int recursion_depth);
+
+	/// <summary>
 	/// Finds the nearest object intersecting with the ray if there is such
 	/// </summary>
 	/// <param name="ray_origin"> Where the ray is cast from </param>
 	/// <param name="ray_direction"> Normalized direction vector</param>
-	/// <param name="shadow_ray"> Whether the ray is a shadow ray. If so, terminate immediately after
-	/// finding the first intersection with parameter t in range (0, 1)</param>
+	/// <param name="shadow_ray"> Whether the ray is a shadow ray. If so, intersections with a 
+	/// t parameter in range (0, 1) are ignored </param>
 	/// <returns> A pair where the first component is the intersection point.
 	/// (has -1 in w component if no intersection) and the second is an intersection_type
 	/// /index to the corresponding buffer pair</returns>
@@ -438,6 +466,11 @@ private:
 	void ResolveOneRow(int r, const Vec3& bl_world, const Vec3& step_x, const Vec3& step_y, const Vec3& ray_origin);
 
 	/// <summary>
+	/// Method passed to a thread that performs path tracing from the pixels, using the colors in the temporary buffer created in the first pass.
+	/// </summary>
+	//void TraceOneRow(int r, const Vec3& bl_world, const Vec3& step_x, const Vec3& step_y, const Vec3& ray_origin, std::vector<float> temp_color_buffer);
+
+	/// <summary>
 	/// Computes a ray-triangle intersection, returns the
 	/// t parameter for ray_direction (if it is smaller than zero intersection was not found)
 	/// </summary>
@@ -453,6 +486,12 @@ private:
 	/// Calculates lighting for fragment in world coords
 	/// </summary>
 	Color ComputeLighting(const Vec3& ray_origin, const Vec3& intersection, const Material& material, const Vec3& surface_normal);
+
+	/// <summary>
+	/// Calculates light coming from secondary rays using pathtracing reflection
+	/// </summary>
+	/// <returns></returns>
+	Color GetReflectedColor(const Vec3& ray_origin, const Vec3& intersection, const Material& material, const Vec3& surface_normal, int recursion_depth);
 
 	/// <summary>
 	/// Used to handle the drawing switch based on the current mode
