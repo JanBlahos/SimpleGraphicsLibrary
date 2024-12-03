@@ -405,13 +405,14 @@ private:
 	/// Finds the nearest object intersecting with the ray if there is such
 	/// </summary>
 	/// <param name="ray_origin"> Where the ray is cast from </param>
-	/// <param name="ray_direction"> Normalized direction vector</param>
+	/// <param name="ray_direction"> Direction vector.r.</param>
 	/// <param name="shadow_ray"> Whether the ray is a shadow ray. If so, intersections with a 
-	/// t parameter in range (0, 1) are ignored </param>
+	/// t parameters outside range (0, 1) after normalization by direction norm are ignored </param>
+	/// <param name="direction_norm">Size of the direction vector before normalization. Needed for shadow rays </param>
 	/// <returns> A pair where the first component is the intersection point.
 	/// (has -1 in w component if no intersection) and the second is an intersection_type
 	/// /index to the corresponding buffer pair</returns>
-	std::pair<Vec3, std::pair<sglIntersectionType, int>> RayIntersection(const Vec3& ray_origin, const Vec3& ray_direction, bool shadow_ray);
+	std::pair<Vec3, std::pair<sglIntersectionType, int>> RayIntersection(const Vec3& ray_origin, const Vec3& ray_direction, bool shadow_ray, float direction_norm = 1.0f);
 
 	/// <summary>
 	/// Computes a surface normal for sphere
@@ -458,6 +459,10 @@ private:
 	/// </summary>
 	float RaySphereIntersection(const Vec3& ray_origin, const Vec3& ray_direction, const Sphere& sphere);
 
+	/// <summary>
+	/// Perform pathtracing of secondary rays reflected along the normal
+	/// </summary>
+	/// <returns></returns>
 	Color PathTraceReflections(const Vec3& ray_origin, const Vec3& intersection, const Material& material, const Vec3& surface_normal, int recursion_depth);
 
 	/// <summary>

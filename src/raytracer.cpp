@@ -146,7 +146,6 @@ void Context::RayTraceScene() {
 	Vec3 step_x = (br_t - bl_t) * (1.0f / (win_width - 1));
 	Vec3 step_y = (tl_t - bl_t) * (1.0f / (win_height - 1));
 
-	//First pass. Compute lighting for each pixel
 	for (unsigned r = 0; r < win_height; ++r) {
 
 		thread_pool.enqueue([&, r, bl_t, step_x, step_y, ray_origin]() {
@@ -156,10 +155,9 @@ void Context::RayTraceScene() {
 		//ResolveOneRow(r, bl_t, step_x, step_y, ray_origin);
 	}
 	thread_pool.WaitUntilFinished();
-	//Second pass. Perform the path tracing of reflected/refracted rays.
 };
 
-std::pair<Vec3, std::pair<sglIntersectionType, int>> Context::RayIntersection(const Vec3& ray_origin, const Vec3& ray_direction, bool shadow_ray) {
+std::pair<Vec3, std::pair<sglIntersectionType, int>> Context::RayIntersection(const Vec3& ray_origin, const Vec3& ray_direction, bool shadow_ray, float direction_norm) {
 	//int nearest_polygon = -1;
 	//int nearest_sphere = -1;
 	float smallest_dist = std::numeric_limits<float>::max();
@@ -173,14 +171,20 @@ std::pair<Vec3, std::pair<sglIntersectionType, int>> Context::RayIntersection(co
 
 		float t  = RaySphereIntersection(ray_origin, ray_direction, sphere);
 		if (t <= epsilon) continue;
+		float normalized_t = t / direction_norm;
+		//std::cout << "Normalized t" << normalized_t << std::endl;
 		Vec3 intersection = ray_origin + (Vec3(ray_direction.x * t, ray_direction.y * t, ray_direction.z * t));
-		if (shadow_ray && t <= 1.0f - epsilon) {
-			continue;
-			/*std::cout << "Found sphere intersection at t " << t << std::endl;
-			return std::make_pair(intersection, std::make_pair(SPHERE, i));*/
+		//ignore self intersections when casting shadow rays
+		if (shadow_ray && (normalized_t >= 100 * epsilon && normalized_t <= 1.0f - epsilon)) {
+			//continue;
+			//std::cout << "Found sphere intersection at t " << normalized_t << std::endl;
+			return std::make_pair(intersection, std::make_pair(SPHERE, i));
 		}
-		float new_dist = intersection.Distance(ray_origin);
+		else if (shadow_ray) {
+			continue;
+		}
 
+		float new_dist = intersection.Distance(ray_origin);
 		if (new_dist > 0.0f && new_dist < smallest_dist) {
 			smallest_dist = new_dist;
 			//nearest_sphere = i;
@@ -198,21 +202,26 @@ std::pair<Vec3, std::pair<sglIntersectionType, int>> Context::RayIntersection(co
 				"are currently not supported");
 		}
 		/// backface culling
-		if (primitive.normal.dot(ray_direction) >= -epsilon && !shadow_ray) {
+		if (primitive.normal.dot(ray_direction) >= -epsilon) {
 			continue;
 		}
 
 		float t = RayTriangleIntersection(ray_origin, ray_direction, primitive);
 		if (t <= epsilon) continue;
+		float normalized_t = t / direction_norm;
 		//std::cout << "T " << t << std::endl;
+		//std::cout << "Normalized t" << normalized_t << std::endl;
 		Vec3 intersection = ray_origin + (Vec3(ray_direction.x * t, ray_direction.y * t, ray_direction.z * t));
-		if (shadow_ray && (t <= 1.0f - epsilon)) {
+		//ignore self intersections when casting shadow rays
+		if (shadow_ray && (normalized_t >= 100 * epsilon && normalized_t <= 1.0f - epsilon)) { //normalized_t >= 1 + epsilon
+			//continue;
+			//std::cout << "Found triangle intersection at t " << normalized_t << std::endl;
+			return std::make_pair(intersection, std::make_pair(TRIANGLE, i));
+		}
+		else if (shadow_ray) {
 			continue;
-			/*std::cout << "Found triangle intersection at t " << t << std::endl;
-			return std::make_pair(intersection, std::make_pair(TRIANGLE, i));*/
 		}
 		float new_dist = intersection.Distance(ray_origin);
-
 		if (new_dist > 0.0f && new_dist < smallest_dist) {
 			smallest_dist = new_dist;
 			//nearest_polygon = i;
@@ -474,6 +483,7 @@ Color Context::ComputeLighting(const Vec3& ray_origin, const Vec3& intersection,
 		///Cast a shadow ray and check whether the light is not shadowed
 		Vec3 light_pos = Vec3{ light.x, light.y, light.z };
 		Vec3 L = light_pos - intersection;
+		float L_norm = sqrt(L.dot(L));
 		//diffuse reflection
 		L.normalize();
 		float cos_alpha = L.dot(N);
@@ -483,12 +493,13 @@ Color Context::ComputeLighting(const Vec3& ray_origin, const Vec3& intersection,
 		Vec3 R = (2 * cos_alpha * N) - L;
 		float cos_beta_sh = std::pow(std::max(R.dot(E), 0.0f), material.shine);
 
-		//auto masking_intesection_info = RayIntersection(intersection, L, true);
-		///// If any intersection was found this light is shadowed by some object. It does not contribute
-		//if (masking_intesection_info.second.first > NO_INTERSECTION) {
-		//	//std::cout << "Skipping light" << std::endl;
-		//	continue;
-		//}
+		auto masking_intesection_info = RayIntersection(intersection, L, true, L_norm);
+		auto intersection_type = masking_intesection_info.second.first;
+		/// If any intersection was found this light is shadowed by some object. It does not contribute
+		if (intersection_type != NO_INTERSECTION) {
+			//std::cout << "Skipping light" << std::endl;
+			continue;
+		}
 
 		//combine the components together
 		color.r += (light.r * material.r * material.kd * cos_alpha) + (light.r * material.ks * cos_beta_sh);
