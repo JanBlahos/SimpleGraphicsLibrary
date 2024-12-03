@@ -378,14 +378,6 @@ private:
 	unsigned Pixel2Index(unsigned x, unsigned y);
 
 	/// <summary>
-	/// Returns the idx in color buffer for a given point in world coordinates.
-	/// Call only when drawing or raytracing scene to get correct results.
-	/// </summary>
-	/// <param name="point"> Point in world coordinates </param>
-	/// <returns></returns>
-	//unsigned BufferIdxFromWorld(const Vec4& point);
-
-	/// <summary>
 	/// Attempts to draw a point into color buffer
 	/// </summary>
 	/// <param name="x1"> Point x coordinate</param>
@@ -408,17 +400,6 @@ private:
 	/// <param name="ray_origin"> Where the ray is cast from</param>
 	/// <param name="ray_direction"> Normalized direction vector</param>
 	bool ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_direction, Color& fragment_color);
-
-	/// <summary>
-	/// Perform path tracing from the current intersection
-	/// </summary>
-	/// <param name="ray_origin"> Where the ray is cast from</param>
-	/// <param name="ray_direction"> Normalized ray direction</param>
-	/// <param name="current_color"> Current color of the secondary ray. Initialize as {1, 1, 1} from the starting point</param>
-	/// <param name="temp_color_buffer"> Buffer containing lighting computed from the first pass of raytracing</param>
-	/// <param name="recursion_depth"> How many reflections were already performed. Used to terminate after  PATH_TRACING RECURSION DEPTH</param>
-	/// <returns></returns>
-	//bool TracePixelColor(const Vec3& ray_origin, const Vec3& ray_direction, Color& current_color, std::vector<float> temp_color_buffer, int recursion_depth);
 
 	/// <summary>
 	/// Finds the nearest object intersecting with the ray if there is such
@@ -466,11 +447,6 @@ private:
 	void ResolveOneRow(int r, const Vec3& bl_world, const Vec3& step_x, const Vec3& step_y, const Vec3& ray_origin);
 
 	/// <summary>
-	/// Method passed to a thread that performs path tracing from the pixels, using the colors in the temporary buffer created in the first pass.
-	/// </summary>
-	//void TraceOneRow(int r, const Vec3& bl_world, const Vec3& step_x, const Vec3& step_y, const Vec3& ray_origin, std::vector<float> temp_color_buffer);
-
-	/// <summary>
 	/// Computes a ray-triangle intersection, returns the
 	/// t parameter for ray_direction (if it is smaller than zero intersection was not found)
 	/// </summary>
@@ -482,16 +458,17 @@ private:
 	/// </summary>
 	float RaySphereIntersection(const Vec3& ray_origin, const Vec3& ray_direction, const Sphere& sphere);
 
+	Color PathTraceReflections(const Vec3& ray_origin, const Vec3& intersection, const Material& material, const Vec3& surface_normal, int recursion_depth);
+
 	/// <summary>
-	/// Calculates lighting for fragment in world coords
+	/// Calculates lighting for fragment in world coords without using any path tracing
 	/// </summary>
 	Color ComputeLighting(const Vec3& ray_origin, const Vec3& intersection, const Material& material, const Vec3& surface_normal);
 
 	/// <summary>
-	/// Calculates light coming from secondary rays using pathtracing reflection
+	/// Calculates lighting for fragment in world coords using both lighting model and path tracing
 	/// </summary>
-	/// <returns></returns>
-	Color GetReflectedColor(const Vec3& ray_origin, const Vec3& intersection, const Material& material, const Vec3& surface_normal, int recursion_depth);
+	Color ComputeLightingAndTrace(const Vec3& ray_origin, const Vec3& intersection, const Material& material, const Vec3& surface_normal);
 
 	/// <summary>
 	/// Used to handle the drawing switch based on the current mode

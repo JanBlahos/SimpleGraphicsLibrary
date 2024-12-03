@@ -136,20 +136,6 @@ void Context::SetPixel(unsigned x, unsigned y, float depth) {
 	}
 }
 
-//unsigned Context::BufferIdxFromWorld(const Vec4& point) {
-//	Vec4 transformed_vec = Matrix::Matmul(PVM_matrix, point);
-//	transformed_vec.PerspectiveDivide();
-//	Vec4 vec_in_screen = Matrix::Matmul(Vp_matrix, transformed_vec);
-//
-//	float _tx, _ty;
-//	_tx = vec_in_screen.x;
-//	_ty = vec_in_screen.y;
-//	int tx, ty;
-//	tx = static_cast<int>(std::floor(_tx));
-//	ty = static_cast<int>(std::floor(_ty));
-//	return Pixel2Index(tx, ty);
-//}
-
 void Context::SetPixelNoChecks(unsigned x, unsigned y, Color color) {
 	unsigned i = Pixel2Index(x, y);
 	color_buffer[i] = color.r;
