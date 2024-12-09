@@ -17,6 +17,9 @@
 #define USE_INCREMENTAL_ERROR false
 #define MAX_VERTICES 100
 
+//maximum recursion for secondary rays
+#define MAX_RECURSION_DEPTH 8
+
 #define PHONG_LIGHTING //comment this line for cook-torrance model instead
 
 // roughness isnt specified for given materials, therefore
@@ -93,6 +96,18 @@ typedef struct {
 	const float radius;
 	unsigned long long mat_idx;
 } Sphere;
+
+typedef struct {
+	const Vec3 origin;
+	const Vec3 direction;
+} Ray;
+
+typedef struct {
+	const bool valid;
+	const Vec3 point;
+	const Vec3 normal;
+	unsigned mat_idx;
+} IntersectionData;
 
 /// <summary>
 /// Class handling matrix stacks and rasterization calls
@@ -385,6 +400,48 @@ private:
 	bool ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_direction, Color& fragment_color);
 
 	/// <summary>
+	/// Recursive function that computes pixel color
+	/// </summary>
+	Vec3 TraceRay(const Ray& ray, int depth);
+
+	/// <summary>
+	/// Attempts to find an intersection with an object and
+	/// returns a struct containing relevant data
+	/// </summary>
+	IntersectionData FindIntersection(const Ray& ray);
+
+	/// <summary>
+	/// Computes direct light contribution given necessary data,
+	/// casts shadow rays
+	/// </summary>
+	Vec3 ComputeDirectLight(const IntersectionData& intersection, const Vec3& ray_origin);
+
+	/// <summary>
+	/// Casts a shadow ray from intersection point towards light,
+	/// returns true on object hit, false if light is unobstructed
+	/// </summary>
+	bool CastShadowRay(const Vec3& light_pos, const Vec3& intersection_point);
+
+	/// <summary>
+	/// Reflects a ray along a normal
+	/// </summary>
+	/// <param name="N"> Normalized surface normal</param>
+	/// <param name="L"> Normalized direction to the ray origin from the surface</param>
+	/// <returns></returns>
+	Vec3 Reflect(const Vec3& N, const Vec3& L);
+
+	/// <summary>
+	/// Returns refracted ray, handles edge cases like total
+	/// internal reflection
+	/// </summary>
+	Vec3 Refract(const Vec3& I, const Vec3& N, float ior);
+
+	/// <summary>
+	/// Computes the fresnel coefficient via Schlick apporximation
+	/// </summary>
+	float Fresnel(const Vec3& ray_direction, const Vec3& intersection_normal, float ior);
+
+	/// <summary>
 	/// Computes a surface normal for sphere
 	/// </summary>
 	/// <param name="sphere"> Input sphere for center coords</param>
@@ -428,6 +485,18 @@ private:
 	/// -1 in w component otherwise
 	/// </summary>
 	bool RaySphereIntersection(const Vec3& ray_origin, const Vec3& ray_direction, const Sphere& sphere, Vec3& intersection);
+
+	/// <summary>
+	/// Checks for intersection with given primitive, returns parameter t,
+	/// where intersection = ray_origin + t * ray_direction
+	/// </summary>
+	bool RayTriangleIntersection(const Vec3& ray_origin, const Vec3& ray_direction, const Polygon& primitive, float& t);
+
+	/// <summary>
+	/// Checks for intersection with given primitive, returns parameter t,
+	/// where intersection = ray_origin + t * ray_direction
+	/// </summary>
+	bool RaySphereIntersection(const Vec3& ray_origin, const Vec3& ray_direction, const Sphere& sphere, float& t);
 
 	/// <summary>
 	/// Calculates lighting for fragment in world coords

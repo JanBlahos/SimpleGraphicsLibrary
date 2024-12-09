@@ -75,20 +75,6 @@ Vec4 Context::BilinearInterpolation(
 	return (1.0f - v) * bottom + v * top;
 }
 
-void Context::ResolveOneRow(int r, const Vec3& bl_world, const Vec3& step_x, const Vec3& step_y, const Vec3& ray_origin) {
-	for (unsigned c = 0; c < win_width; ++c) {
-		Vec3 pixel_in_world = bl_world + (c * step_x) + (r * step_y);
-		Vec3 ray_direction = Vec3{ pixel_in_world.x - ray_origin.x, pixel_in_world.y - ray_origin.y, pixel_in_world.z - ray_origin.z };
-		ray_direction.normalize();
-
-		Color color;
-		if (!ComputePixelColor(ray_origin, ray_direction, color)) continue;
-
-		//setpixel uses x, y not row column, so column becomes x
-		SetPixelNoChecks(c, r, color);
-	}
-}
-
 void Context::RayTraceScene() {
 	if (is_drawing) {
 		throw SGLInvalidOperationException("RayTraceScene called inside Begin-End sequence");
@@ -146,12 +132,256 @@ void Context::RayTraceScene() {
 
 	for (unsigned r = 0; r < win_height; ++r) {
 
-		thread_pool.enqueue([&, r, bl_t, step_x, step_y, ray_origin]() {
+		/*thread_pool.enqueue([&, r, bl_t, step_x, step_y, ray_origin]() {
 			ResolveOneRow(r, bl_t, step_x, step_y, ray_origin);
-		});
+		});*/
+
+		ResolveOneRow(r, bl_t, step_x, step_y, ray_origin);
 	}
-	thread_pool.WaitUntilFinished();
+	//thread_pool.WaitUntilFinished();
 };
+
+void Context::ResolveOneRow(int r, const Vec3& bl_world, const Vec3& step_x, const Vec3& step_y, const Vec3& ray_origin) {
+	for (unsigned c = 0; c < win_width; ++c) {
+		Vec3 pixel_in_world = bl_world + (c * step_x) + (r * step_y);
+		Vec3 ray_direction = Vec3{ pixel_in_world.x - ray_origin.x, pixel_in_world.y - ray_origin.y, pixel_in_world.z - ray_origin.z };
+		ray_direction.normalize();
+
+		//Color color;
+		//if (!ComputePixelColor(ray_origin, ray_direction, color)) continue;
+
+		Ray ray { ray_origin, ray_direction };
+		Vec3 color = TraceRay(ray, 0);
+
+		//handle no intersection in first pass
+		if (color.x == -1.0f) continue;
+
+		//setpixel uses x, y not row column, so column becomes x
+		SetPixelNoChecks(c, r, Color{color.x, color.y, color.z});
+	}
+}
+
+Vec3 Context::TraceRay(const Ray& ray, int depth) {
+	IntersectionData intersection = FindIntersection(ray);
+	if (!intersection.valid) {
+		if (depth == 0) {
+			//first pass no intersection -> dont write to color buffer
+			return Vec3{ -1.0f, 0.0f, 0.0f };
+		} else {
+			return Vec3{ 0.0f, 0.0f, 0.0f };
+		}
+	}
+
+	//TODO shadow rays inside this method
+	Vec3 direct_lighting = ComputeDirectLight(intersection, ray.origin);
+
+	Vec3 reflection_color{ 0.0f, 0.0f, 0.0f };
+	Vec3 refraction_color{ 0.0f, 0.0f, 0.0f };
+	const Material& mat = materials[intersection.mat_idx];
+	
+	if (depth < MAX_RECURSION_DEPTH-1) {
+		//reflected ray
+		if (mat.ks > 0.0f) {
+			Vec3 dir_towards_origin = ray.origin - intersection.point;
+			dir_towards_origin.normalize();
+			Vec3 reflected_dir = Reflect(intersection.normal, dir_towards_origin);
+			Ray reflected_ray{ intersection.point, reflected_dir };
+			reflection_color = TraceRay(reflected_ray, depth + 1);
+		}
+
+		//refracted ray
+		/*if (mat.T > 0.0f) {
+			Vec3 refracted_dir = Refract(ray.direction, intersection.normal, mat.ior);
+			Ray refracted_ray{ intersection.point, refracted_dir };
+			refraction_color = TraceRay(refracted_ray, depth + 1);
+		}*/
+	}
+
+	Vec3 color{ 0.0f, 0.0f, 0.0f };
+	float F = Fresnel(ray.direction, intersection.normal, mat.ior);
+	color += direct_lighting;
+	color += F * mat.ks * reflection_color;
+	color += (1.0f - F) * mat.T * refraction_color;
+
+	return color;
+};
+
+IntersectionData Context::FindIntersection(const Ray& ray) {
+	bool valid = false;
+	Vec3 point{ 0.0f, 0.0f, 0.0f };
+	Vec3 normal{ 0.0f, 0.0f, 0.0f };
+	unsigned mat_idx = 0;
+
+	int nearest_polygon = -1;
+	int nearest_sphere = -1;
+	float smallest_dist = std::numeric_limits<float>::max();
+	Vec3 nearest_intersection;
+
+	float new_dist;
+	Vec3 intersection;
+
+	for (unsigned long i = 0; i < sphere_buffer.size(); ++i) {
+		const auto& sphere = sphere_buffer[i];
+
+		if (!RaySphereIntersection(ray.origin, ray.direction, sphere, intersection)) continue;
+
+		new_dist = intersection.Distance2(ray.origin);
+
+		if (new_dist < smallest_dist) {
+			smallest_dist = new_dist;
+			nearest_sphere = i;
+			nearest_intersection = intersection;
+		}
+	}
+
+	for (unsigned long i = 0; i < primitive_buffer.size(); ++i) {
+		const auto& primitive = primitive_buffer[i];
+
+		if (!RayTriangleIntersection(ray.origin, ray.direction, primitive, intersection)) continue;
+
+		new_dist = intersection.Distance2(ray.origin);
+
+		if (new_dist < smallest_dist) {
+			smallest_dist = new_dist;
+			nearest_polygon = i;
+			nearest_intersection = intersection;
+			nearest_sphere = -1; //don't consider spheres anymore
+		}
+	}
+
+	if (nearest_sphere == -1 && nearest_polygon == -1) { //no intersection
+	}
+	else if (nearest_polygon == -1) { //sphere
+		const auto& intersected_sphere = sphere_buffer[nearest_sphere];
+
+		valid = true;
+		point = nearest_intersection;
+		mat_idx = intersected_sphere.mat_idx;
+		normal = GetNormalizedNormal(intersected_sphere, nearest_intersection);
+	}
+	else { //triangle
+		const auto& intersected_triangle = primitive_buffer[nearest_polygon];
+
+		valid = true;
+		point = nearest_intersection;
+		mat_idx = intersected_triangle.mat_idx;
+		normal = GetNormalizedNormal(intersected_triangle, ray.origin);
+	}
+
+	return IntersectionData{valid, point, normal, mat_idx};
+};
+
+Vec3 Context::ComputeDirectLight(const IntersectionData& intersection, const Vec3& ray_origin) {
+	//Phong
+	Vec3 color{ 0.0f, 0.0f, 0.0f };
+	const Vec3& N = intersection.normal;
+	Vec3 E = ray_origin - intersection.point;
+	E.normalize();
+
+	const Material& material = materials[intersection.mat_idx];
+
+	for (auto& light : point_lights) {
+		//cast shadow ray from intersection point to the light, if an object is between the
+		//two points, continue
+		Vec3 light_pos{ light.x, light.y, light.z };
+		if (CastShadowRay(light_pos, intersection.point)) {
+			continue;
+		}
+
+		//diffuse reflection
+		Vec3 L = light_pos - intersection.point;
+		L.normalize();
+		float cos_alpha = L.dot(N);
+		cos_alpha = std::max(cos_alpha, 0.0f);
+
+		//specular reflection
+		Vec3 R = (2 * cos_alpha * N) - L;
+		float cos_beta_sh = std::pow(std::max(R.dot(E), 0.0f), material.shine);
+
+		//combine the components together
+		color.x += (light.r * material.r * material.kd * cos_alpha) + (light.r * material.ks * cos_beta_sh);
+		color.y += (light.g * material.g * material.kd * cos_alpha) + (light.g * material.ks * cos_beta_sh);
+		color.z += (light.b * material.b * material.kd * cos_alpha) + (light.b * material.ks * cos_beta_sh);
+	}
+
+	return color;
+};
+
+bool Context::CastShadowRay(const Vec3& light_pos, const Vec3& intersection_point) {
+
+	//TODO ignore self intersections by passing intersected primitive
+	//on which intersection_point lies
+
+	float t = 0.0f;
+
+	for (unsigned long i = 0; i < sphere_buffer.size(); ++i) {
+		const auto& sphere = sphere_buffer[i];
+		
+
+		//NOTE sphere intersection works only for normalized direction
+		Vec3 L = light_pos - intersection_point;
+		float L_norm = sqrt(L.dot(L));
+
+		L.normalize();
+
+		if (!RaySphereIntersection(intersection_point, L, sphere, t)) continue;
+
+		t = t / L_norm;
+
+		if (0.001f < t && t <= 1.0f - 0.001f) return true;
+	}
+
+	for (unsigned long i = 0; i < primitive_buffer.size(); ++i) {
+		const auto& primitive = primitive_buffer[i];
+
+		if (!RayTriangleIntersection(intersection_point, light_pos - intersection_point, primitive, t)) continue;
+
+		if (0.001f < t && t <= 1.0f - 0.001f) return true;
+	}
+
+	return false;
+};
+
+float Context::Fresnel(const Vec3& ray_direction, const Vec3& intersection_normal, float ior) {
+	float F0 = (ior - 1.0f) / (ior + 1.0f);
+	F0 *= F0;
+	float r_dot_n = std::max(ray_direction.dot(intersection_normal), 0.0f);
+	float F = F0 + (1.0f - F0) * std::pow((1.0f - r_dot_n), 5);
+	return F;
+};
+
+Vec3 Context::Reflect(const Vec3& N, const Vec3& L) {
+	float cos_alpha = L.dot(N);
+	cos_alpha = std::max(cos_alpha, 0.0f);
+	Vec3 R = (2 * cos_alpha * N) - L;
+	return R;
+}
+
+Vec3 Context::Refract(const Vec3& I, const Vec3& N, float ior) {
+	float cos_theta_I = std::clamp(-N.dot(I), -1.0f, 1.0f); // cosine of the incident angle
+	float eta_I = 1.0f; // refractive index of the incident medium (air = 1.0)
+	float eta_T = ior;  // refractive index of the transmitted medium
+	Vec3 normal = N;
+
+	// if the ray is exiting the medium, swap eta_I and eta_T and invert the normal
+	if (cos_theta_I < 0) {
+		cos_theta_I = -cos_theta_I;
+		std::swap(eta_I, eta_T);
+		normal = Vec3{-N.x, -N.y, -N.z};
+	}
+
+	float eta = eta_I / eta_T;
+	float sin_theta_T2 = eta * eta * (1.0f - cos_theta_I * cos_theta_I);
+
+	// check for total internal reflection
+	if (sin_theta_T2 > 1.0f) {
+		return Vec3{0.0f, 0.0f, 0.0f}; // no refraction, return a zero vector
+	}
+
+	float cos_theta_T = std::sqrt(1.0f - sin_theta_T2);
+	return eta * I + (eta * cos_theta_I - cos_theta_T) * normal;
+};
+
 
 bool Context::ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_direction, Color& fragment_color) {
 	
@@ -219,15 +449,15 @@ Vec3 Context::GetNormalizedNormal(const Polygon& polygon, const Vec3& ray_origin
 	const Vec3& p0 = polygon.points[0];
 	const Vec3& p1 = polygon.points[1];
 	const Vec3& p2 = polygon.points[2];
-	Vec3 normal = Vec3::Cross3D(p1 - p0, p1 - p2);
+	Vec3 normal = Vec3::Cross3D(p1 - p0, p2 - p1);
 
 	//flip if facing away, no polygon orientation defined (ccw/cw)
-	Vec3 dir_towards_camera = ray_origin - p0;
-	dir_towards_camera.normalize();
+	//Vec3 dir_towards_camera = ray_origin - p0;
+	//dir_towards_camera.normalize();
 	normal.normalize();
-	if (normal.dot(dir_towards_camera) < 0) {
+	/*if (normal.dot(dir_towards_camera) < 0) {
 		normal = Vec3{-normal.x, -normal.y, -normal.z};
-	}
+	}*/
 
 	return normal;
 }
@@ -324,6 +554,93 @@ bool Context::RaySphereIntersection(const Vec3& ray_origin, const Vec3& ray_dire
 	t = t0;
 
 	intersection = ray_origin + (Vec3(ray_direction.x * t, ray_direction.y * t, ray_direction.z * t));
+	return true;
+};
+
+bool Context::RayTriangleIntersection(const Vec3& ray_origin, const Vec3& ray_direction, const Polygon& primitive, float& t) {
+	constexpr float epsilon = std::numeric_limits<float>::epsilon();
+
+	Vec3 e1 = primitive.points[1] - primitive.points[0];
+	Vec3 e2 = primitive.points[2] - primitive.points[0];
+	Vec3 ray_cross_e2 = Vec3::Cross3D(ray_direction, e2);
+
+	// these represent determinants of the
+	// linear equation system
+	// because Moller-Trumbore algorithm
+	// uses Cramer´s rule to find solutions
+
+	float det = e1.dot(ray_cross_e2);
+
+	if (std::abs(det) < epsilon) { // parallel
+		return false;
+	}
+
+	float inv_det = 1.0f / det;
+	Vec3 s = ray_origin - primitive.points[0];
+	// the u parameter representing the coefficent of edge 1
+	float u = inv_det * s.dot(ray_cross_e2);
+
+	if ((u < 0 && std::abs(u) > epsilon) || (u > 1 && std::abs(u - 1) > epsilon)) {
+		return false;
+	}
+
+	Vec3 s_cross_e1 = Vec3::Cross3D(s, e1);
+	// the v parameter representing the coefficient of edge 2
+	// these two need to be a convex combination of the edges to be within the triangle
+	float v = inv_det * ray_direction.dot(s_cross_e1);
+
+	if ((v < 0 && std::abs(v) > epsilon) || (u + v > 1 && std::abs(u + v - 1) > epsilon)) {
+		return false;
+	}
+	// t parameter representing the coefficient of ray direction
+	float t_ = inv_det * e2.dot(s_cross_e1);
+
+	if (t_ <= epsilon) {
+		return false;
+	}
+
+	t = t_;
+	return true;
+};
+
+bool Context::RaySphereIntersection(const Vec3& ray_origin, const Vec3& ray_direction, const Sphere& sphere, float& t) {
+	// implementation of geometric solution found here:
+	// https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection.html
+	// check Figure 1 for better understanding of the code
+
+	float t0, t1;
+
+	Vec3 center = Vec3{ sphere.x, sphere.y, sphere.z };
+	Vec3 L = center - ray_origin;
+	float tca = L.dot(ray_direction);
+
+	if (tca < 0) {
+		return false;
+	}
+
+	//compare squared dist to avoid sqrt computation
+	float d2 = L.dot(L) - tca * tca;
+
+	if (d2 > sphere.radius * sphere.radius) {
+		return false;
+	}
+
+	float thc = std::sqrt(sphere.radius * sphere.radius - d2);
+	t0 = tca - thc;
+	t1 = tca + thc;
+
+	if (t0 > t1) {
+		std::swap(t0, t1);
+	}
+
+	if (t0 < 0) {
+		t0 = t1;
+		if (t0 < 0) {
+			return false;
+		};
+	}
+	t = t0;
+
 	return true;
 };
 
