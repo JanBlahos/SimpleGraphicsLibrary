@@ -178,7 +178,7 @@ Vec3 Context::TraceRay(const Ray& ray, int depth) {
 	Vec3 refraction_color{ 0.0f, 0.0f, 0.0f };
 	const Material& mat = materials[intersection.mat_idx];
 	
-	if (depth < MAX_RECURSION_DEPTH-1) {
+	if (depth <= MAX_RECURSION_DEPTH) {
 		//reflected ray
 		if (mat.ks > 0.0f) {
 			Vec3 dir_towards_origin = ray.origin - intersection.point;
@@ -191,7 +191,7 @@ Vec3 Context::TraceRay(const Ray& ray, int depth) {
 		//refracted ray
 		if (mat.T > 0.0f) {
 			Vec3 refracted_dir = Refract(ray.direction, intersection.normal, mat.ior);
-			if (refracted_dir.dot(refracted_dir) != 0.0f) {
+			if (refracted_dir.dot(refracted_dir) > 0.0f) {
 				Ray refracted_ray{ intersection.point, refracted_dir };
 				refraction_color = TraceRay(refracted_ray, depth + 1);
 			}
@@ -202,6 +202,10 @@ Vec3 Context::TraceRay(const Ray& ray, int depth) {
 	color += direct_lighting;
 	color += mat.ks * reflection_color;
 	color += mat.T * refraction_color;
+
+	color.x = std::clamp(color.x, 0.0f, 1.0f);
+	color.y = std::clamp(color.y, 0.0f, 1.0f);
+	color.z = std::clamp(color.z, 0.0f, 1.0f);
 
 	return color;
 };
@@ -227,7 +231,7 @@ IntersectionData Context::FindIntersection(const Ray& ray) {
 
 		new_dist = intersection.Distance2(ray.origin);
 
-		if (new_dist < smallest_dist) {
+		if (new_dist < smallest_dist && new_dist > SELF_INTERSECTION_TOLERANCE_DISTANCE2) {
 			smallest_dist = new_dist;
 			nearest_sphere = i;
 			nearest_intersection = intersection;
@@ -239,9 +243,15 @@ IntersectionData Context::FindIntersection(const Ray& ray) {
 
 		if (!RayTriangleIntersection(ray.origin, ray.direction, primitive, intersection)) continue;
 
+		//backface culling
+		normal = GetNormalizedNormal(primitive, intersection);
+		if ((intersection - ray.origin).dot(normal) > 0.0f) {
+			continue;
+		}
+
 		new_dist = intersection.Distance2(ray.origin);
 
-		if (new_dist < smallest_dist) {
+		if (new_dist < smallest_dist && new_dist > SELF_INTERSECTION_TOLERANCE_SPHERE) {
 			smallest_dist = new_dist;
 			nearest_polygon = i;
 			nearest_intersection = intersection;
@@ -279,6 +289,10 @@ Vec3 Context::ComputeDirectLight(const IntersectionData& intersection, const Vec
 	E.normalize();
 
 	const Material& material = materials[intersection.mat_idx];
+
+	/*if ((intersection.point - ray_origin).dot(intersection.normal) > 0.0f) {
+		return color;
+	}*/
 
 	for (auto& light : point_lights) {
 		//cast shadow ray from intersection point to the light, if an object is between the
@@ -381,7 +395,6 @@ Vec3 Context::Refract(const Vec3& I, const Vec3& N, float ior) {
 	float cos_theta_T = std::sqrt(1.0f - sin_theta_T2);
 	return eta * I + (eta * cos_theta_I - cos_theta_T) * normal;
 };
-
 
 bool Context::ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_direction, Color& fragment_color) {
 	
@@ -545,9 +558,9 @@ bool Context::RaySphereIntersection(const Vec3& ray_origin, const Vec3& ray_dire
 	}
 
 	float t;
-	if (t0 < 0) {
+	if (t0 < 0.0f || t0 < SELF_INTERSECTION_TOLERANCE_SPHERE) {
 		t0 = t1;
-		if (t0 < 0) {
+		if (t0 < 0.0f || t0 < SELF_INTERSECTION_TOLERANCE_SPHERE) {
 			return false;
 		};
 	}
@@ -663,6 +676,7 @@ Color Context::ComputeLighting(const Vec3& ray_origin, const Vec3& intersection,
 	E.normalize();
 
 	for (auto& light : point_lights) {
+
 		//diffuse reflection
 		Vec3 light_pos = Vec3{ light.x, light.y, light.z };
 		Vec3 L = light_pos - intersection;

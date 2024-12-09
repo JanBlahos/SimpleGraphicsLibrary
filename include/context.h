@@ -17,6 +17,10 @@
 #define USE_INCREMENTAL_ERROR false
 #define MAX_VERTICES 100
 
+//tuned parameters for refractions
+#define SELF_INTERSECTION_TOLERANCE_SPHERE 0.01f
+#define SELF_INTERSECTION_TOLERANCE_DISTANCE2 0.00000001f
+
 //maximum recursion for secondary rays
 #define MAX_RECURSION_DEPTH 8
 
