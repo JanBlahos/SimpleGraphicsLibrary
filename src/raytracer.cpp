@@ -132,13 +132,13 @@ void Context::RayTraceScene() {
 
 	for (unsigned r = 0; r < win_height; ++r) {
 
-		/*thread_pool.enqueue([&, r, bl_t, step_x, step_y, ray_origin]() {
+		thread_pool.enqueue([&, r, bl_t, step_x, step_y, ray_origin]() {
 			ResolveOneRow(r, bl_t, step_x, step_y, ray_origin);
-		});*/
+		});
 
-		ResolveOneRow(r, bl_t, step_x, step_y, ray_origin);
+		//ResolveOneRow(r, bl_t, step_x, step_y, ray_origin);
 	}
-	//thread_pool.WaitUntilFinished();
+	thread_pool.WaitUntilFinished();
 };
 
 void Context::ResolveOneRow(int r, const Vec3& bl_world, const Vec3& step_x, const Vec3& step_y, const Vec3& ray_origin) {
@@ -172,7 +172,6 @@ Vec3 Context::TraceRay(const Ray& ray, int depth) {
 		}
 	}
 
-	//TODO shadow rays inside this method
 	Vec3 direct_lighting = ComputeDirectLight(intersection, ray.origin);
 
 	Vec3 reflection_color{ 0.0f, 0.0f, 0.0f };
@@ -190,18 +189,19 @@ Vec3 Context::TraceRay(const Ray& ray, int depth) {
 		}
 
 		//refracted ray
-		/*if (mat.T > 0.0f) {
+		if (mat.T > 0.0f) {
 			Vec3 refracted_dir = Refract(ray.direction, intersection.normal, mat.ior);
-			Ray refracted_ray{ intersection.point, refracted_dir };
-			refraction_color = TraceRay(refracted_ray, depth + 1);
-		}*/
+			if (refracted_dir.dot(refracted_dir) != 0.0f) {
+				Ray refracted_ray{ intersection.point, refracted_dir };
+				refraction_color = TraceRay(refracted_ray, depth + 1);
+			}
+		}
 	}
 
 	Vec3 color{ 0.0f, 0.0f, 0.0f };
-	float F = Fresnel(ray.direction, intersection.normal, mat.ior);
 	color += direct_lighting;
-	color += F * mat.ks * reflection_color;
-	color += (1.0f - F) * mat.T * refraction_color;
+	color += mat.ks * reflection_color;
+	color += mat.T * refraction_color;
 
 	return color;
 };
