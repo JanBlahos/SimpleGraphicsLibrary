@@ -342,63 +342,12 @@ void Context::DrawEllipse(float x, float y, float z, float a, float b) {
 
 	BeginDrawing(draw_mode);
 
-	/// Buffer center if points or fill area mode are specified
-	/*if (draw_mode == SGL_POLYGON) {
-		BufferVertex4f(x, y, z, 1.0f);
-	}*/
-
 	for (int i = 0; i < NUM_SEGMENTS; i++) {
 		float theta = (2 * PI) * static_cast<float>(i) / (NUM_SEGMENTS - 1);
 		float x_pos = x + a * cos(theta);
 		float y_pos = y + b * sin(theta);
-		//
+		
 		BufferVertex4f(x_pos, y_pos, z, 1.0f);
 	}
 	EndDrawing();
-	//if (is_drawing) {
-	//	throw SGLInvalidOperationException("Cannot call this function while drawing.");
-	//}
-	//is_drawing = true;
-
-	////draw by quadrants, use precomputed angles
-	//Matrix PVM = Matrix::Matmul(matrix_stack.GetProjectionMatrix(), matrix_stack.GetViewModelMatrix());
-	//const Matrix& Vp = matrix_stack.GetViewport();
-
-	////TODO hw02
-	///*if (area_mode == sglEAreaMode::SGL_POINT) {
-	//	...
-	//}*/
-
-	//PVM = Matrix::Matmul(PVM, Matrix::Translation3D(x, y, z));
-
-	//float x_pos = a * precomputed_angles[0];
-	//float y_pos = b * precomputed_angles[1];
-
-	//Vec4 v1 = VertexToScreen(Vec4{x_pos, y_pos, 0.0f, 1.0f}, PVM, Vp),
-	//	 v2 = VertexToScreen(Vec4{ -x_pos, y_pos, 0.0f, 1.0f }, PVM, Vp),
-	//	 v3 = VertexToScreen(Vec4{ x_pos, -y_pos, 0.0f, 1.0f }, PVM, Vp),
-	//	 v4 = VertexToScreen(Vec4{ -x_pos, -y_pos, 0.0f, 1.0f }, PVM, Vp);
-
-	//for (int i = 1; i < QUADRANT_SEGMENTS+1; i++) {
-	//	int j = 2 * i;
-	//	x_pos = a * precomputed_angles[j];
-	//	y_pos = b * precomputed_angles[j+1];
-
-	//	Vec4 u1 = VertexToScreen(Vec4{ x_pos, y_pos, 0.0f, 1.0f }, PVM, Vp),
-	//		u2 = VertexToScreen(Vec4{ -x_pos, y_pos, 0.0f, 1.0f }, PVM, Vp),
-	//		u3 = VertexToScreen(Vec4{ x_pos, -y_pos, 0.0f, 1.0f }, PVM, Vp),
-	//		u4 = VertexToScreen(Vec4{ -x_pos, -y_pos, 0.0f, 1.0f }, PVM, Vp);
-
-	//	BresenhamLine(static_cast<int>(v1.x), static_cast<int>(v1.y), static_cast<int>(u1.x), static_cast<int>(u1.y));
-	//	BresenhamLine(static_cast<int>(v2.x), static_cast<int>(v2.y), static_cast<int>(u2.x), static_cast<int>(u2.y));
-	//	BresenhamLine(static_cast<int>(v3.x), static_cast<int>(v3.y), static_cast<int>(u3.x), static_cast<int>(u3.y));
-	//	BresenhamLine(static_cast<int>(v4.x), static_cast<int>(v4.y), static_cast<int>(u4.x), static_cast<int>(u4.y));
-
-	//	v1 = u1;
-	//	v2 = u2;
-	//	v3 = u3;
-	//	v4 = u4;
-	//}
-
-	//is_drawing = false;
 }

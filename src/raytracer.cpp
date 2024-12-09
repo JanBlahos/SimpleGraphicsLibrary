@@ -131,14 +131,20 @@ void Context::RayTraceScene() {
 	Vec3 step_y = (tl_t - bl_t) * (1.0f / (win_height - 1));
 
 	for (unsigned r = 0; r < win_height; ++r) {
-
+		#ifdef THREADING
 		thread_pool.enqueue([&, r, bl_t, step_x, step_y, ray_origin]() {
 			ResolveOneRow(r, bl_t, step_x, step_y, ray_origin);
 		});
+		#endif // THREADING
 
-		//ResolveOneRow(r, bl_t, step_x, step_y, ray_origin);
+		#ifndef THREADING
+		ResolveOneRow(r, bl_t, step_x, step_y, ray_origin);
+		#endif // THREADING		
 	}
+
+	#ifdef THREADING
 	thread_pool.WaitUntilFinished();
+	#endif // THREADING		
 };
 
 void Context::ResolveOneRow(int r, const Vec3& bl_world, const Vec3& step_x, const Vec3& step_y, const Vec3& ray_origin) {
@@ -146,9 +152,6 @@ void Context::ResolveOneRow(int r, const Vec3& bl_world, const Vec3& step_x, con
 		Vec3 pixel_in_world = bl_world + (c * step_x) + (r * step_y);
 		Vec3 ray_direction = Vec3{ pixel_in_world.x - ray_origin.x, pixel_in_world.y - ray_origin.y, pixel_in_world.z - ray_origin.z };
 		ray_direction.normalize();
-
-		//Color color;
-		//if (!ComputePixelColor(ray_origin, ray_direction, color)) continue;
 
 		Ray ray { ray_origin, ray_direction };
 		Vec3 color = TraceRay(ray, 0);
@@ -290,10 +293,6 @@ Vec3 Context::ComputeDirectLight(const IntersectionData& intersection, const Vec
 
 	const Material& material = materials[intersection.mat_idx];
 
-	/*if ((intersection.point - ray_origin).dot(intersection.normal) > 0.0f) {
-		return color;
-	}*/
-
 	for (auto& light : point_lights) {
 		//cast shadow ray from intersection point to the light, if an object is between the
 		//two points, continue
@@ -322,10 +321,6 @@ Vec3 Context::ComputeDirectLight(const IntersectionData& intersection, const Vec
 };
 
 bool Context::CastShadowRay(const Vec3& light_pos, const Vec3& intersection_point) {
-
-	//TODO ignore self intersections by passing intersected primitive
-	//on which intersection_point lies
-
 	float t = 0.0f;
 
 	for (unsigned long i = 0; i < sphere_buffer.size(); ++i) {
@@ -342,7 +337,7 @@ bool Context::CastShadowRay(const Vec3& light_pos, const Vec3& intersection_poin
 
 		t = t / L_norm;
 
-		if (0.001f < t && t <= 1.0f - 0.001f) return true;
+		if (SHADOW_RAY_TOLERANCE < t && t <= 1.0f - SHADOW_RAY_TOLERANCE) return true;
 	}
 
 	for (unsigned long i = 0; i < primitive_buffer.size(); ++i) {
@@ -350,7 +345,7 @@ bool Context::CastShadowRay(const Vec3& light_pos, const Vec3& intersection_poin
 
 		if (!RayTriangleIntersection(intersection_point, light_pos - intersection_point, primitive, t)) continue;
 
-		if (0.001f < t && t <= 1.0f - 0.001f) return true;
+		if (SHADOW_RAY_TOLERANCE < t && t <= 1.0f - SHADOW_RAY_TOLERANCE) return true;
 	}
 
 	return false;
@@ -464,13 +459,7 @@ Vec3 Context::GetNormalizedNormal(const Polygon& polygon, const Vec3& ray_origin
 	const Vec3& p2 = polygon.points[2];
 	Vec3 normal = Vec3::Cross3D(p1 - p0, p2 - p1);
 
-	//flip if facing away, no polygon orientation defined (ccw/cw)
-	//Vec3 dir_towards_camera = ray_origin - p0;
-	//dir_towards_camera.normalize();
 	normal.normalize();
-	/*if (normal.dot(dir_towards_camera) < 0) {
-		normal = Vec3{-normal.x, -normal.y, -normal.z};
-	}*/
 
 	return normal;
 }
@@ -655,111 +644,4 @@ bool Context::RaySphereIntersection(const Vec3& ray_origin, const Vec3& ray_dire
 	t = t0;
 
 	return true;
-};
-
-float ComputeTan(const Vec3& N, const Vec3& H) { 
-	float n_dot_h = N.dot(H);
-	float cos_theta = std::max(n_dot_h, 0.0f);
-	float sin_theta = std::sqrt(1.0f - cos_theta * cos_theta);
-	// avoid division by zero
-	return (cos_theta > 0.0f) ? (sin_theta / cos_theta) : std::numeric_limits<float>::max();
-}
-
-Color Context::ComputeLighting(const Vec3& ray_origin, const Vec3& intersection, const Material& material, const Vec3& surface_normal) {
-
-#ifdef PHONG_LIGHTING
-
-	//Phong
-	Color color = Color{ 0.0f, 0.0f, 0.0f };
-	const Vec3& N = surface_normal;
-	Vec3 E = ray_origin - intersection;
-	E.normalize();
-
-	for (auto& light : point_lights) {
-
-		//diffuse reflection
-		Vec3 light_pos = Vec3{ light.x, light.y, light.z };
-		Vec3 L = light_pos - intersection;
-		L.normalize();
-		float cos_alpha = L.dot(N);
-		cos_alpha = std::max(cos_alpha, 0.0f);
-
-		//specular reflection
-		Vec3 R = (2 * cos_alpha * N) - L;
-		float cos_beta_sh = std::pow(std::max(R.dot(E), 0.0f), material.shine);
-
-		//combine the components together
-		color.r += (light.r * material.r * material.kd * cos_alpha) + (light.r * material.ks * cos_beta_sh);
-		color.g += (light.g * material.g * material.kd * cos_alpha) + (light.g * material.ks * cos_beta_sh);
-		color.b += (light.b * material.b * material.kd * cos_alpha) + (light.b * material.ks * cos_beta_sh);
-	}
-
-#endif // PHONG_LIGHTING
-
-#ifndef PHONG_LIGHTING
-
-	// attempt at Cook-Torrance microfacet model,
-	// specular component doesn't seem to work
-
-	// uncomment PHONG_LIGHTING in context.h, material roughness can
-	// also be set there since it is not given
-
-	Vec3 color_v = Vec3 { 0.0f, 0.0f, 0.0f };
-	const Vec3& N = surface_normal;
-	Vec3 material_color = Vec3{ material.r, material.g, material.b };
-	Vec3 V = ray_origin - intersection;
-	V.normalize();
-	for (auto& light : point_lights) {
-		Vec3 light_pos = Vec3{ light.x, light.y, light.z };
-		Vec3 light_color = Vec3{ light.r, light.g, light.b };
-		Vec3 L = light_pos - intersection;
-		L.normalize();
-		//half-way vector between viewer and light
-		Vec3 H = L + V;
-		H.normalize();
-
-		float n_dot_v = N.dot(V);
-		float v_dot_h = V.dot(H);
-		float h_dot_n = H.dot(N);
-		float n_dot_l = N.dot(L);
-
-		n_dot_v = std::max(0.0f, n_dot_v);
-		v_dot_h = std::max(0.0f, v_dot_h);
-		h_dot_n = std::max(0.0f, h_dot_n);
-		n_dot_l = std::max(0.0f, n_dot_l);
-
-		if (n_dot_l <= 0.0f || n_dot_v <= 0.0f) {
-			continue;
-		}
-
-		//distribution, geometric attenuation and fresnel
-		float D, G, F;
-
-		//D
-		float alpha = COOK_TORRANCE_ROUGHNESS;
-		D = std::pow(EulerConstant, -(std::pow(ComputeTan(N, H) / alpha, 2)) ) / (PI * alpha * alpha * std::pow(h_dot_n, 4));
-
-		//G
-		float two_hn_vh = 2 * h_dot_n * (1.0f / v_dot_h);
-		G = std::min(1.0f, std::min(two_hn_vh * n_dot_l, two_hn_vh * n_dot_v));
-
-		//F
-		float F0 = (material.ior - 1.0f) / (material.ior + 1.0f);
-		F0 *= F0;
-		F = F0 + (1.0f - F0) * std::pow((1.0f - v_dot_h), 5);
-
-		//fr
-		float fr = (D * G * F) / (4.0f * n_dot_l * n_dot_v);
-
-		float specular = material.ks * fr;
-		Vec3 diffuse = material.kd * material_color * (1.0f / PI);
-
-		color_v += light_color * n_dot_l * (diffuse + Vec3{specular, specular, specular});
-	}
-
-	Color color = Color{color_v.x, color_v.y, color_v.z};
-
-#endif // !PHONG_LIGHTING
-
-	return color;
 };

@@ -121,7 +121,6 @@ void sglDestroyContext(int id) {
 }
 
 void sglSetContext(int id) {
-    std::cout << "Setting context " << id;
     TRY_HANDLE_EXCEPTIONS({
         cm.SetContext(id);
     })

@@ -45,7 +45,6 @@ void Context::EndDrawing() {
 		throw SGLInvalidOperationException("Cannot call this function while not drawing.");
 	}
 
-	// TODO
 	// - close line loop, last triangle, etc. depending on mode
 	if (!is_setting_scene) {
 		if (drawing_mode == SGL_LINE_LOOP) {
@@ -63,7 +62,6 @@ void Context::EndDrawing() {
 		}
 	}
 	is_drawing = false;
-	//std::cout << "end drawing\n";
 };
 
 void Context::DrawVertex(int x1, int y1, float depth) {
@@ -116,7 +114,7 @@ void Context::DrawVertex(int x1, int y1, float depth) {
 		previous_point = Point3D{ x1, y1, depth };
 		break;
 	case SGL_TRIANGLES: //same as polygon
-		//TODO not used yet?
+		//not used yet
 		break;
 	case SGL_POLYGON: //same as line loop?
 		if (num_buffered_vertices == 1) {

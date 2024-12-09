@@ -84,8 +84,6 @@ void Context::AddEdge(float x1, int y1, float z1, float x2, int y2, float z2) {
 	int y_start, y_end;
 	float x_start;
 	float z_start;
-	//std::cout << "Adding edge ( " << x1 << "," << y1 << "," << z1 << ") (" << x2 << "," << y2 << "," << z2 << ")" << std::endl;
-	//std::cout << "Z slope: " << z_slope << std::endl;
 	
 	if (y2 > y1) {
 		y_start = y2;

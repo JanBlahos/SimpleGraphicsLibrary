@@ -21,6 +21,9 @@
 #define SELF_INTERSECTION_TOLERANCE_SPHERE 0.01f
 #define SELF_INTERSECTION_TOLERANCE_DISTANCE2 0.00000001f
 
+//parameter that allows 0.0f + epsilon < t < 1.0f - epsilon
+#define SHADOW_RAY_TOLERANCE 0.001f
+
 //maximum recursion for secondary rays
 #define MAX_RECURSION_DEPTH 8
 
@@ -31,6 +34,8 @@
 // roughness 0 models ideal smooth surface and 1 maximum
 // roughnesss
 #define COOK_TORRANCE_ROUGHNESS 0.5f
+
+#define THREADING //comment for a run without threadpool
 
 typedef struct {
 	//int y_upper;
