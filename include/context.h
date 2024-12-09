@@ -401,14 +401,6 @@ private:
 	void DrawPoint(int x1, int y1, float depth);
 
 	/// <summary>
-	/// Computes pixel color by casting a ray and finding an intersection
-	/// with nearest object in the current scene
-	/// </summary>
-	/// <param name="ray_origin"> Where the ray is cast from</param>
-	/// <param name="ray_direction"> Normalized direction vector</param>
-	bool ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_direction, Color& fragment_color);
-
-	/// <summary>
 	/// Recursive function that computes pixel color
 	/// </summary>
 	Vec3 TraceRay(const Ray& ray, int depth);
@@ -506,11 +498,6 @@ private:
 	/// where intersection = ray_origin + t * ray_direction
 	/// </summary>
 	bool RaySphereIntersection(const Vec3& ray_origin, const Vec3& ray_direction, const Sphere& sphere, float& t);
-
-	/// <summary>
-	/// Calculates lighting for fragment in world coords
-	/// </summary>
-	Color ComputeLighting(const Vec3& ray_origin, const Vec3& intersection, const Material& material, const Vec3& surface_normal);
 
 	/// <summary>
 	/// Used to handle the drawing switch based on the current mode

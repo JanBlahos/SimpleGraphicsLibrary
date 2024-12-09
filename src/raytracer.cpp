@@ -391,61 +391,6 @@ Vec3 Context::Refract(const Vec3& I, const Vec3& N, float ior) {
 	return eta * I + (eta * cos_theta_I - cos_theta_T) * normal;
 };
 
-bool Context::ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_direction, Color& fragment_color) {
-	
-	int nearest_polygon = -1;
-	int nearest_sphere = -1;
-	float smallest_dist = std::numeric_limits<float>::max();
-	Vec3 nearest_intersection;
-	
-	float new_dist;
-	Vec3 intersection;
-
-	for (unsigned long i = 0; i < sphere_buffer.size(); ++i) {
-		const auto& sphere = sphere_buffer[i];
-
-		if (!RaySphereIntersection(ray_origin, ray_direction, sphere, intersection)) continue;
-
-		new_dist = intersection.Distance2(ray_origin);
-
-		if (new_dist < smallest_dist) {
-			smallest_dist = new_dist;
-			nearest_sphere = i;
-			nearest_intersection = intersection;
-		}
-	}
-
-	for (unsigned long i = 0; i < primitive_buffer.size(); ++i) {
-		const auto& primitive = primitive_buffer[i];
-
-		if (!RayTriangleIntersection(ray_origin, ray_direction, primitive, intersection)) continue;
-
-		new_dist = intersection.Distance2(ray_origin);
-
-		if (new_dist < smallest_dist) {
-			smallest_dist = new_dist;
-			nearest_polygon = i;
-			nearest_intersection = intersection;
-			nearest_sphere = -1; //don't consider spheres anymore
-		}
-	}
-
-	if (nearest_sphere == -1 && nearest_polygon == -1) { //no intersection
-		return false;
-	} else if (nearest_polygon == -1) { //sphere
-		const auto& intersected_sphere = sphere_buffer[nearest_sphere];
-
-		//need at least intersection point, primitive material, surface normal
-		// (cross for triangle or subtract center for sphere, normalize!!!)
-		fragment_color = ComputeLighting(ray_origin, nearest_intersection, materials.at(intersected_sphere.mat_idx), GetNormalizedNormal(intersected_sphere, nearest_intersection));
-	} else { //triangle
-		const auto& intersected_triangle = primitive_buffer[nearest_polygon];
-		fragment_color = ComputeLighting(ray_origin, nearest_intersection, materials.at(intersected_triangle.mat_idx), GetNormalizedNormal(intersected_triangle, ray_origin));
-	}
-
-	return true;
-}
-
 Vec3 Context::GetNormalizedNormal(const Sphere& sphere, const Vec3& intersection) {
 	Vec3 center = Vec3{sphere.x, sphere.y, sphere.z};
 	Vec3 normal = intersection - center;
