@@ -31,6 +31,8 @@ void Context::SetMaterial(const float r,
 	if (is_drawing) {
 		throw SGLInvalidOperationException("SetMaterial called inside Begin-End sequence");
 	}
+
+	assigning_emmisive_material = false;
 	materials.emplace_back(Material{r, g, b, kd, ks, shine, T, ior});
 };
 
@@ -62,6 +64,32 @@ void Context::CreateSphere(const float x,
 		throw SGLInvalidOperationException("CreateSphere called outside BeginScene-EndScene sequence");
 	}
 	sphere_buffer.push_back(Sphere{x, y, z, radius, materials.size() - 1});
+}
+
+void Context::SetEnvironmentMap(const int width,
+	const int height,
+	float* texels)
+{
+	//TODO exceptions + store texture (maybe no need to copy)
+
+	if (is_drawing) {
+		throw SGLInvalidOperationException("SetEnvironmentMap called inside Begin-End sequence");
+	}
+}
+
+void Context::SetEmissiveMaterial(const float r,
+	const float g,
+	const float b,
+	const float c0,
+	const float c1,
+	const float c2)
+{
+	if (is_drawing) {
+		throw SGLInvalidOperationException("SetEmissiveMaterial called inside Begin-End sequence");
+	}
+
+	assigning_emmisive_material = true;
+	emissive_materials.emplace_back(EmissiveMaterial{r, g, b, c0, c1, c2});
 }
 
 Vec4 Context::BilinearInterpolation(
@@ -293,7 +321,8 @@ Vec3 Context::ComputeDirectLight(const IntersectionData& intersection, const Vec
 
 	const Material& material = materials[intersection.mat_idx];
 
-	for (auto& light : point_lights) {
+	//point lights
+	for (const auto& light : point_lights) {
 		//cast shadow ray from intersection point to the light, if an object is between the
 		//two points, continue
 		Vec3 light_pos{ light.x, light.y, light.z };
@@ -317,7 +346,76 @@ Vec3 Context::ComputeDirectLight(const IntersectionData& intersection, const Vec
 		color.z += (light.b * material.b * material.kd * cos_alpha) + (light.b * material.ks * cos_beta_sh);
 	}
 
+	//area lights
+	for (const auto& area_light : area_lights) {
+
+		const auto& light_material = emissive_materials[area_light.mat_idx];
+
+		for (int i = 0; i < AREA_LIGHT_SAMPLES; ++i) {
+			Vec3 light_pos = SampleTriangle(area_light.points);
+
+			if (CastShadowRay(light_pos, intersection.point)) {
+				continue;
+			}
+
+			float d = light_pos.Distance(intersection.point);
+			Vec3 light_to_inter_dir = intersection.point - light_pos;
+			light_to_inter_dir.normalize();
+			float cos_fi = light_to_inter_dir.dot(area_light.normal);
+			cos_fi = std::max(cos_fi, 0.0f);
+			float coef = cos_fi * (area_light.area / AREA_LIGHT_SAMPLES) /
+				(light_material.c0 + light_material.c1 * d + light_material.c2 * d * d);
+
+			Color light_intensity = {
+				light_material.r * coef,
+				light_material.g * coef,
+				light_material.b * coef };
+
+			//diffuse reflection
+			Vec3 L = light_pos - intersection.point;
+			L.normalize();
+			float cos_alpha = L.dot(N);
+			cos_alpha = std::max(cos_alpha, 0.0f);
+
+			//specular reflection
+			Vec3 R = (2 * cos_alpha * N) - L;
+			float cos_beta_sh = std::pow(std::max(R.dot(E), 0.0f), material.shine);
+
+			//combine the components together
+			color.x += (light_intensity.r * material.r * material.kd * cos_alpha) + (light_intensity.r * material.ks * cos_beta_sh);
+			color.y += (light_intensity.g * material.g * material.kd * cos_alpha) + (light_intensity.g * material.ks * cos_beta_sh);
+			color.z += (light_intensity.b * material.b * material.kd * cos_alpha) + (light_intensity.b * material.ks * cos_beta_sh);
+		}
+	}
+
 	return color;
+};
+
+Vec3 Context::SampleTriangle(const std::array<Vec3, 3>& points) {
+	float r1, r2, u, v;
+	r1 = 0.0f;
+	r2 = 0.0f;
+
+	//TODO random r1, r2 from [0, 1]
+	r1 = RandomFloat01();
+	r2 = RandomFloat01();
+
+	if (r1 + r2 > 1.0f) {
+		u = 1.0f - r1;
+		v = 1.0f - r2;
+	} else {
+		u = r1;
+		v = r2;
+	}
+
+	Vec3 e1 = points[1] - points[0];
+	Vec3 e2 = points[2] - points[0];
+
+	return points[0] + u * e1 + v * e2;
+}
+
+float Context::RandomFloat01() {
+	return unifrom_real_distribution(rng);
 };
 
 bool Context::CastShadowRay(const Vec3& light_pos, const Vec3& intersection_point) {

@@ -24,6 +24,10 @@ Context::Context(unsigned width, unsigned height) : thread_pool(std::thread::har
 	max_y = 0;
 	min_y = height;
 	is_setting_scene = false;
+	assigning_emmisive_material = false;
+
+	unifrom_real_distribution = std::uniform_real_distribution<float>(0.0f, 1.0f);
+	rng.seed(RNG_SEED);
 };
 
 Context::~Context() {

@@ -649,7 +649,18 @@ void sglRasterizeScene() {}
 void sglEnvironmentMap(const int width,
                        const int height,
                        float *texels)
-{}
+{
+    Context* cc = cm.current_context;
+    if (cc != nullptr) {
+
+        TRY_HANDLE_EXCEPTIONS({
+            cc->SetEnvironmentMap(width, height, texels);
+            })
+    }
+    else {
+        setErrCode(SGL_INVALID_OPERATION);
+    }
+}
 
 void sglEmissiveMaterial(const float r,
                          const float g,
@@ -657,4 +668,15 @@ void sglEmissiveMaterial(const float r,
                          const float c0,
                          const float c1,
                          const float c2)
-{}
+{
+    Context* cc = cm.current_context;
+    if (cc != nullptr) {
+
+        TRY_HANDLE_EXCEPTIONS({
+            cc->SetEmissiveMaterial(r, g, b, c0, c1, c2);
+            })
+    }
+    else {
+        setErrCode(SGL_INVALID_OPERATION);
+    }
+}

@@ -7,6 +7,7 @@
 #define _CONTEXT_H_
 
 #include <vector>
+#include <random>
 
 #include "sgl.h"
 #include "matrixStack.h"
@@ -36,6 +37,9 @@
 #define COOK_TORRANCE_ROUGHNESS 0.5f
 
 #define THREADING //comment for a run without threadpool
+
+#define AREA_LIGHT_SAMPLES 16
+#define RNG_SEED 1
 
 typedef struct {
 	//int y_upper;
@@ -71,6 +75,8 @@ typedef struct {
 	float z;
 } Point3D;
 
+//TODO pack material and emissive material into variant
+
 typedef struct {
 	const float r;
 	const float g;
@@ -81,6 +87,15 @@ typedef struct {
 	const float T;
 	const float ior;
 } Material;
+
+typedef struct {
+	const float r;
+	const float g;
+	const float b;
+	const float c0;
+	const float c1;
+	const float c2;
+} EmissiveMaterial;
 
 typedef struct {
 	const float x;
@@ -95,8 +110,14 @@ typedef struct {
 	unsigned long long mat_idx;
 	std::array<Vec3, 3> points; //triangles only, should use
 								// vector for general polygon
-	//std::vector<Vec4> points;
 } Polygon;
+
+typedef struct {
+	unsigned long long mat_idx;
+	std::array<Vec3, 3> points;
+	float area;
+	Vec3 normal;
+} AreaLight;
 
 typedef struct {
 	const float x;
@@ -338,6 +359,23 @@ public:
 		const float radius);
 
 	/// <summary>
+	/// Sets environment map to the given array
+	/// </summary>
+	void SetEnvironmentMap(const int width,
+		const int height,
+		float* texels);
+
+	/// <summary>
+	/// Adds emissive material for subsequent area lights
+	/// </summary>
+	void SetEmissiveMaterial(const float r,
+		const float g,
+		const float b,
+		const float c0,
+		const float c1,
+		const float c2);
+
+	/// <summary>
 	/// Computes the image after setting the scene
 	/// </summary>
 	void RayTraceScene();
@@ -379,15 +417,24 @@ private:
 	std::vector<PointLight> point_lights;
 	std::vector<Polygon> primitive_buffer;
 	std::vector<Sphere> sphere_buffer;
+	std::vector<AreaLight> area_lights;
 
 	//a vector containing all specified materials,
 	// primitives get a pointer to their material
 	std::vector<Material> materials;
+	std::vector<EmissiveMaterial> emissive_materials;
+
+	//whether the last defined material is emissive for
+	//use with area lights
+	bool assigning_emmisive_material;
 
 	//for buffering triangle vertices in RT
 	unsigned next_vertex_idx;
 
 	ThreadPool thread_pool;
+
+	std::mt19937 rng;
+	std::uniform_real_distribution<float> unifrom_real_distribution;
 
 	//returns index to the color buffer based off of screen coords
 	unsigned Pixel2Index(unsigned x, unsigned y);
@@ -469,6 +516,16 @@ private:
 		const Vec4& bl, const Vec4& br,
 		const Vec4& tl, const Vec4& tr,
 		float u, float v);
+
+	/// <summary>
+	/// Returns a random point that lies in given triangle
+	/// </summary>
+	Vec3 SampleTriangle(const std::array<Vec3, 3>& points);
+
+	/// <summary>
+	/// Returns a random float from the interval [0, 1]
+	/// </summary>
+	float RandomFloat01();
 
 	/// <summary>
 	/// Method passed to a thread that computes a pixel color and writes it to color buffer

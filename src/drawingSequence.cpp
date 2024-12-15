@@ -34,8 +34,13 @@ void Context::BeginDrawing(sglEElementType mode) {
 
 	if (is_setting_scene) {
 		//insert new polygon and assign last material
-		primitive_buffer.push_back(Polygon{});
-		primitive_buffer.back().mat_idx = materials.size() - 1;
+		if (assigning_emmisive_material) {
+			area_lights.push_back(AreaLight{});
+			area_lights.back().mat_idx = emissive_materials.size() - 1;
+		} else {
+			primitive_buffer.push_back(Polygon{});
+			primitive_buffer.back().mat_idx = materials.size() - 1;
+		}
 		next_vertex_idx = 0;
 	}
 };
@@ -142,8 +147,23 @@ void Context::DrawVertex(int x1, int y1, float depth) {
 }
 
 void Context::AddVertexToPolygon(const Vec3& v) {
-	auto& pts = primitive_buffer.back().points;
-	pts[next_vertex_idx] = v;
+	if (assigning_emmisive_material) { //area light
+		auto& pts = area_lights.back().points;
+		pts[next_vertex_idx] = v;
+
+		//compute area and normal when all vertices are set
+		if (next_vertex_idx == 2) {
+			Vec3 e1 = pts[1] - pts[0];
+			Vec3 e2 = pts[2] - pts[1];
+			Vec3 normal = Vec3::Cross3D(e1, e2);
+			area_lights.back().area = 0.5f * std::sqrt(normal.dot(normal));
+			normal.normalize();
+			area_lights.back().normal = normal;
+		}
+	} else { //standard geometry triangle
+		auto& pts = primitive_buffer.back().points;
+		pts[next_vertex_idx] = v;
+	}
 	next_vertex_idx++;
 };
 
