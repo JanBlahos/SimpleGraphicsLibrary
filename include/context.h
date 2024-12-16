@@ -139,6 +139,12 @@ typedef struct {
 	unsigned mat_idx;
 } IntersectionData;
 
+typedef struct {
+	int width;
+	int height;
+	float* texels;
+} EnvironmentMap;
+
 /// <summary>
 /// Class handling matrix stacks and rasterization calls
 /// </summary>
@@ -436,6 +442,9 @@ private:
 	std::mt19937 rng;
 	std::uniform_real_distribution<float> unifrom_real_distribution;
 
+	bool environment_map_set;
+	EnvironmentMap environment_map;
+
 	//returns index to the color buffer based off of screen coords
 	unsigned Pixel2Index(unsigned x, unsigned y);
 
@@ -526,6 +535,12 @@ private:
 	/// Returns a random float from the interval [0, 1]
 	/// </summary>
 	float RandomFloat01();
+
+	/// <summary>
+	/// Returns a color from environment map texture
+	/// based on given ray
+	/// </summary>
+	Vec3 RayEnvironmentMapColor(const Ray& ray);
 
 	/// <summary>
 	/// Method passed to a thread that computes a pixel color and writes it to color buffer

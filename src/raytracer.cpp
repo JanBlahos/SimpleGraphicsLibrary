@@ -70,11 +70,13 @@ void Context::SetEnvironmentMap(const int width,
 	const int height,
 	float* texels)
 {
-	//TODO exceptions + store texture (maybe no need to copy)
-
 	if (is_drawing) {
 		throw SGLInvalidOperationException("SetEnvironmentMap called inside Begin-End sequence");
 	}
+
+	//the user owns the array
+	environment_map = EnvironmentMap{ width, height, texels };
+	environment_map_set = true;
 }
 
 void Context::SetEmissiveMaterial(const float r,
@@ -195,11 +197,17 @@ void Context::ResolveOneRow(int r, const Vec3& bl_world, const Vec3& step_x, con
 Vec3 Context::TraceRay(const Ray& ray, int depth) {
 	IntersectionData intersection = FindIntersection(ray);
 	if (!intersection.valid) {
-		if (depth == 0) {
-			//first pass no intersection -> dont write to color buffer
-			return Vec3{ -1.0f, 0.0f, 0.0f };
+
+		if (environment_map_set) {
+			return RayEnvironmentMapColor(ray);
 		} else {
-			return Vec3{ 0.0f, 0.0f, 0.0f };
+			if (depth == 0) {
+				//first pass no intersection -> dont write to color buffer
+				return Vec3{ -1.0f, 0.0f, 0.0f };
+			}
+			else {
+				return Vec3{ 0.0f, 0.0f, 0.0f };
+			}
 		}
 	}
 
@@ -416,6 +424,31 @@ Vec3 Context::SampleTriangle(const std::array<Vec3, 3>& points) {
 
 float Context::RandomFloat01() {
 	return unifrom_real_distribution(rng);
+};
+
+Vec3 Context::RayEnvironmentMapColor(const Ray& ray) {
+	Vec3 color{ 0.0f, 0.0f, 0.0f };
+
+	Vec3 dir = ray.direction;
+	dir.normalize();
+
+	float d, r, u, v;
+	d = std::sqrt(dir.x * dir.x + dir.y * dir.y);
+	r = d > 0 ? std::acos(dir.z)/(2*PI*d) : 0.0f;
+	u = 0.5 + dir.x * r;
+	v = 0.5 + dir.y * r;
+	
+	int x, y;
+	x = static_cast<int>(std::floor(u * (environment_map.width - 1)));
+	y = static_cast<int>(std::floor((1.0f - v) * (environment_map.height - 1)));
+
+	int idx = (y * environment_map.width + x) * 3;
+
+	color.x = environment_map.texels[idx];
+	color.y = environment_map.texels[idx+1];
+	color.z = environment_map.texels[idx+2];
+
+	return color;
 };
 
 bool Context::CastShadowRay(const Vec3& light_pos, const Vec3& intersection_point) {
