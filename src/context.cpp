@@ -122,7 +122,6 @@ unsigned Context::Pixel2Index(unsigned x, unsigned y) {
 
 void Context::SetPixel(unsigned x, unsigned y, float depth) {
 	//check if in window
-	//TODO can check for the whole primitive
 	if (x < win_width && y < win_height && x >= 0 && y >= 0) {
 		unsigned i = Pixel2Index(x, y);
 		unsigned j = i / 3;

@@ -472,8 +472,6 @@ Vec3 Context::ComputeDirectLight(const IntersectionData& intersection, const Vec
 
 Vec3 Context::SampleTriangle(const std::array<Vec3, 3>& points) {
 	float r1, r2, u, v;
-	r1 = 0.0f;
-	r2 = 0.0f;
 
 	//random r1, r2 from [0, 1]
 	r1 = RandomFloat01();
@@ -512,11 +510,11 @@ Vec3 Context::RayEnvironmentMapColor(const Ray& ray) {
 	/* flip the v since texture is stored top - down while texture
 	coordinates start in bottom left corner */
 	int x, y;
-	x = static_cast<int>(std::floor(u * (environment_map.width-1)));
-	y = static_cast<int>(std::floor((1.0f - v) * (environment_map.height-1)));
+	x = static_cast<int>(std::floor(u * (environment_map.width)));
+	y = static_cast<int>(std::floor((1.0f - v) * (environment_map.height)));
 
-	//x = std::clamp(x, 0, environment_map.width - 1);
-	//y = std::clamp(y, 0, environment_map.height - 1);
+	x = std::clamp(x, 0, environment_map.width - 1);
+	y = std::clamp(y, 0, environment_map.height - 1);
 
 	int idx = (y * environment_map.width + x) * 3;
 

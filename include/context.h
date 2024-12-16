@@ -75,8 +75,6 @@ typedef struct {
 	float z;
 } Point3D;
 
-//TODO pack material and emissive material into variant
-
 typedef struct {
 	const float r;
 	const float g;
