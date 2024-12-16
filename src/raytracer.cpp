@@ -106,6 +106,7 @@ Vec4 Context::BilinearInterpolation(
 }
 
 void Context::RayTraceScene() {
+
 	if (is_drawing) {
 		throw SGLInvalidOperationException("RayTraceScene called inside Begin-End sequence");
 	}
@@ -196,8 +197,26 @@ void Context::ResolveOneRow(int r, const Vec3& bl_world, const Vec3& step_x, con
 
 Vec3 Context::TraceRay(const Ray& ray, int depth) {
 	IntersectionData intersection = FindIntersection(ray);
-	if (!intersection.valid) {
 
+	//for depth 0 (primary rays), find intersection with area lights,
+	// if closer than intersection with object, return its color
+	if (depth == 0) {
+		IntersectionData light_intersection = FindLightIntersection(ray);
+		if (light_intersection.valid) {
+			const auto& material = emissive_materials[light_intersection.mat_idx];
+			if (intersection.valid) {
+				float d1 = intersection.point.Distance2(ray.origin);
+				float d2 = light_intersection.point.Distance2(ray.origin);
+				if (d2 < d1) {
+					return Vec3{ material.r, material.g, material.b };
+				}
+			} else {
+				return Vec3{ material.r, material.g, material.b };
+			}
+		}
+	}
+
+	if (!intersection.valid) {
 		if (environment_map_set) {
 			return RayEnvironmentMapColor(ray);
 		} else {
@@ -217,7 +236,7 @@ Vec3 Context::TraceRay(const Ray& ray, int depth) {
 	Vec3 refraction_color{ 0.0f, 0.0f, 0.0f };
 	const Material& mat = materials[intersection.mat_idx];
 	
-	if (depth <= MAX_RECURSION_DEPTH) {
+	if (depth < MAX_RECURSION_DEPTH) {
 		//reflected ray
 		if (mat.ks > 0.0f) {
 			Vec3 dir_towards_origin = ray.origin - intersection.point;
@@ -242,9 +261,12 @@ Vec3 Context::TraceRay(const Ray& ray, int depth) {
 	color += mat.ks * reflection_color;
 	color += mat.T * refraction_color;
 
-	color.x = std::clamp(color.x, 0.0f, 1.0f);
-	color.y = std::clamp(color.y, 0.0f, 1.0f);
-	color.z = std::clamp(color.z, 0.0f, 1.0f);
+	//clamping here is apparently not correct and produces a different
+	// image for environment maps
+
+	//color.x = std::clamp(color.x, 0.0f, 1.0f);
+	//color.y = std::clamp(color.y, 0.0f, 1.0f);
+	//color.z = std::clamp(color.z, 0.0f, 1.0f);
 
 	return color;
 };
@@ -318,6 +340,55 @@ IntersectionData Context::FindIntersection(const Ray& ray) {
 	}
 
 	return IntersectionData{valid, point, normal, mat_idx};
+};
+
+IntersectionData Context::FindLightIntersection(const Ray& ray) {
+	bool valid = false;
+	Vec3 point{ 0.0f, 0.0f, 0.0f };
+	Vec3 normal{ 0.0f, 0.0f, 0.0f };
+	unsigned mat_idx = 0;
+
+	int nearest_polygon = -1;
+	float smallest_dist = std::numeric_limits<float>::max();
+	Vec3 nearest_intersection;
+
+	float new_dist;
+	Vec3 intersection;
+
+	for (unsigned long i = 0; i < area_lights.size(); ++i) {
+		const auto& area_light = area_lights[i];
+		Polygon primitive;
+		primitive.mat_idx = area_light.mat_idx;
+		primitive.points = area_light.points;
+
+		if (!RayTriangleIntersection(ray.origin, ray.direction, primitive, intersection)) continue;
+
+		//backface culling
+		normal = GetNormalizedNormal(primitive, intersection);
+		if ((intersection - ray.origin).dot(normal) > 0.0f) {
+			continue;
+		}
+
+		new_dist = intersection.Distance2(ray.origin);
+
+		if (new_dist < smallest_dist && new_dist > SELF_INTERSECTION_TOLERANCE_SPHERE) {
+			smallest_dist = new_dist;
+			nearest_polygon = i;
+			nearest_intersection = intersection;
+		}
+	}
+
+	if (nearest_polygon == -1) { //no intersection
+	}else { //triangle
+		const auto& intersected_triangle = primitive_buffer[nearest_polygon];
+
+		valid = true;
+		point = nearest_intersection;
+		mat_idx = intersected_triangle.mat_idx;
+		normal = GetNormalizedNormal(intersected_triangle, ray.origin);
+	}
+
+	return IntersectionData{ valid, point, normal, mat_idx };
 };
 
 Vec3 Context::ComputeDirectLight(const IntersectionData& intersection, const Vec3& ray_origin) {
@@ -404,7 +475,7 @@ Vec3 Context::SampleTriangle(const std::array<Vec3, 3>& points) {
 	r1 = 0.0f;
 	r2 = 0.0f;
 
-	//TODO random r1, r2 from [0, 1]
+	//random r1, r2 from [0, 1]
 	r1 = RandomFloat01();
 	r2 = RandomFloat01();
 
@@ -438,9 +509,14 @@ Vec3 Context::RayEnvironmentMapColor(const Ray& ray) {
 	u = 0.5 + dir.x * r;
 	v = 0.5 + dir.y * r;
 	
+	/* flip the v since texture is stored top - down while texture
+	coordinates start in bottom left corner */
 	int x, y;
-	x = static_cast<int>(std::floor(u * (environment_map.width - 1)));
-	y = static_cast<int>(std::floor((1.0f - v) * (environment_map.height - 1)));
+	x = static_cast<int>(std::floor(u * (environment_map.width-1)));
+	y = static_cast<int>(std::floor((1.0f - v) * (environment_map.height-1)));
+
+	//x = std::clamp(x, 0, environment_map.width - 1);
+	//y = std::clamp(y, 0, environment_map.height - 1);
 
 	int idx = (y * environment_map.width + x) * 3;
 

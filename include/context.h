@@ -468,6 +468,12 @@ private:
 	IntersectionData FindIntersection(const Ray& ray);
 
 	/// <summary>
+	/// Attempts to find an intersection with an area light and
+	/// returns a struct containing relevant data
+	/// </summary>
+	IntersectionData FindLightIntersection(const Ray& ray);
+
+	/// <summary>
 	/// Computes direct light contribution given necessary data,
 	/// casts shadow rays
 	/// </summary>
