@@ -144,9 +144,17 @@ void Context::DrawVertex(int x1, int y1, float depth) {
 }
 
 void Context::AddVertexToPolygon(const Vec3& v) {
-	auto& pts = primitive_buffer.back().points;
+	auto& poly = primitive_buffer.back();
+	auto& pts = poly.points;
 	pts[next_vertex_idx] = v;
 	next_vertex_idx++;
+	if (next_vertex_idx == 3) {
+		const Vec3& p0 = pts[0];
+		const Vec3& p1 = pts[1];
+		const Vec3& p2 = pts[2];
+		poly.normal = Vec3::Cross3D(p1 - p0, p2 - p1);
+		poly.normal.normalize();
+	}
 };
 
 void Context::BufferVertex4f(float x, float y, float z, float w) {

@@ -76,9 +76,10 @@ Vec4 Context::BilinearInterpolation(
 }
 
 void Context::ResolveOneRow(int r, const Vec3& bl_world, const Vec3& step_x, const Vec3& step_y, const Vec3& ray_origin) {
+	Vec3 pixel_in_world = bl_world + (r * step_y);
 	for (unsigned c = 0; c < win_width; ++c) {
-		Vec3 pixel_in_world = bl_world + (c * step_x) + (r * step_y);
-		Vec3 ray_direction = Vec3{ pixel_in_world.x - ray_origin.x, pixel_in_world.y - ray_origin.y, pixel_in_world.z - ray_origin.z };
+		pixel_in_world += step_x;
+		Vec3 ray_direction{ pixel_in_world.x - ray_origin.x, pixel_in_world.y - ray_origin.y, pixel_in_world.z - ray_origin.z };
 		ray_direction.normalize();
 
 		Color color;
@@ -202,7 +203,7 @@ bool Context::ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_directio
 		fragment_color = ComputeLighting(ray_origin, nearest_intersection, materials.at(intersected_sphere.mat_idx), GetNormalizedNormal(intersected_sphere, nearest_intersection));
 	} else { //triangle
 		const auto& intersected_triangle = primitive_buffer[nearest_polygon];
-		fragment_color = ComputeLighting(ray_origin, nearest_intersection, materials.at(intersected_triangle.mat_idx), GetNormalizedNormal(intersected_triangle, ray_origin));
+		fragment_color = ComputeLighting(ray_origin, nearest_intersection, materials.at(intersected_triangle.mat_idx), intersected_triangle.normal);
 	}
 
 	return true;
@@ -212,23 +213,6 @@ Vec3 Context::GetNormalizedNormal(const Sphere& sphere, const Vec3& intersection
 	Vec3 center = Vec3{sphere.x, sphere.y, sphere.z};
 	Vec3 normal = intersection - center;
 	normal.normalize();
-	return normal;
-}
-
-Vec3 Context::GetNormalizedNormal(const Polygon& polygon, const Vec3& ray_origin) {
-	const Vec3& p0 = polygon.points[0];
-	const Vec3& p1 = polygon.points[1];
-	const Vec3& p2 = polygon.points[2];
-	Vec3 normal = Vec3::Cross3D(p1 - p0, p1 - p2);
-
-	//flip if facing away, no polygon orientation defined (ccw/cw)
-	Vec3 dir_towards_camera = ray_origin - p0;
-	dir_towards_camera.normalize();
-	normal.normalize();
-	if (normal.dot(dir_towards_camera) < 0) {
-		normal = Vec3{-normal.x, -normal.y, -normal.z};
-	}
-
 	return normal;
 }
 
