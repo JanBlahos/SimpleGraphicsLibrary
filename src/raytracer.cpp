@@ -75,21 +75,6 @@ Vec4 Context::BilinearInterpolation(
 	return (1.0f - v) * bottom + v * top;
 }
 
-void Context::ResolveOneRow(int r, const Vec3& bl_world, const Vec3& step_x, const Vec3& step_y, const Vec3& ray_origin) {
-	Vec3 pixel_in_world = bl_world + (r * step_y);
-	for (unsigned c = 0; c < win_width; ++c) {
-		pixel_in_world += step_x;
-		Vec3 ray_direction{ pixel_in_world.x - ray_origin.x, pixel_in_world.y - ray_origin.y, pixel_in_world.z - ray_origin.z };
-		ray_direction.normalize();
-
-		Color color;
-		if (!ComputePixelColor(ray_origin, ray_direction, color)) continue;
-
-		//setpixel uses x, y not row column, so column becomes x
-		SetPixelNoChecks(c, r, color);
-	}
-}
-
 void Context::RayTraceScene() {
 	if (is_drawing) {
 		throw SGLInvalidOperationException("RayTraceScene called inside Begin-End sequence");
@@ -106,17 +91,17 @@ void Context::RayTraceScene() {
 	PVM_matrix = Matrix::Matmul(P, VM);
 	Vp_matrix = matrix_stack.GetViewport();
 
+	//raster corners
 	Vec4 bottom_left = Vec4{ 0.0f, 0.0f, -1.0f, 1.0f };
 	Vec4 bottom_right = Vec4{ static_cast<float>(win_width), 0.0f, -1.0f, 1.0f };
 	Vec4 top_left = Vec4{ 0.0f, static_cast<float>(win_height), -1.0f, 1.0f };
 	Vec4 top_right = Vec4{ static_cast<float>(win_width), static_cast<float>(win_height), -1.0f, 1.0f };
 
-	Vec4 cam = Vec4{0.0f, 0.0f, 0.0f, 1.0f};
-
 	Matrix PVM_inv, Vp_inv;
 	Matrix VpPVM = Matrix::Matmul(Vp_matrix, PVM_matrix);
 
 	//transform camera
+	Vec4 cam = Vec4{ 0.0f, 0.0f, 0.0f, 1.0f };
 	Matrix VM_inv;
 	Matrix::InvertMatrix(VM, VM_inv);
 	Vec4 cam_t = Matrix::Matmul(VM_inv, cam);
@@ -128,17 +113,17 @@ void Context::RayTraceScene() {
 	Vec4 bl_t4 = Matrix::Matmul(PVM_Vp_inv, bottom_left); //tranformed bottom left
 	Vec4 br_t4 = Matrix::Matmul(PVM_Vp_inv, bottom_right); //tranformed bottom right
 	Vec4 tl_t4 = Matrix::Matmul(PVM_Vp_inv, top_left);; //tranformed top left
-	Vec4 tr_t4 = Matrix::Matmul(PVM_Vp_inv, top_right);; //transformed top right
+	//Vec4 tr_t4 = Matrix::Matmul(PVM_Vp_inv, top_right);; //transformed top right
 
 	bl_t4.PerspectiveDivide();
 	br_t4.PerspectiveDivide();
 	tl_t4.PerspectiveDivide();
-	tr_t4.PerspectiveDivide();
+	//tr_t4.PerspectiveDivide();
 
 	Vec3 bl_t(bl_t4);
 	Vec3 br_t(br_t4);
 	Vec3 tl_t(tl_t4);
-	Vec3 tr_t(tr_t4);
+	//Vec3 tr_t(tr_t4);
 
 	Vec3 ray_origin(cam_t);
 
@@ -154,6 +139,22 @@ void Context::RayTraceScene() {
 	thread_pool.WaitUntilFinished();
 };
 
+void Context::ResolveOneRow(int r, const Vec3& bl_world, const Vec3& step_x, const Vec3& step_y, const Vec3& ray_origin) {
+	Vec3 pixel_in_world = bl_world + (r * step_y);
+	for (unsigned c = 0; c < win_width; ++c) {
+		pixel_in_world += step_x;
+
+		Vec3 ray_direction{ pixel_in_world.x - ray_origin.x, pixel_in_world.y - ray_origin.y, pixel_in_world.z - ray_origin.z };
+		ray_direction.normalize();
+
+		Color color;
+		if (!ComputePixelColor(ray_origin, ray_direction, color)) continue;
+
+		//setpixel uses x, y not row column, so column becomes x
+		SetPixelNoChecks(c, r, color);
+	}
+}
+
 bool Context::ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_direction, Color& fragment_color) {
 	
 	int nearest_polygon = -1;
@@ -164,6 +165,7 @@ bool Context::ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_directio
 	float new_dist;
 	Vec3 intersection;
 
+	//sphere objects
 	for (unsigned long i = 0; i < sphere_buffer.size(); ++i) {
 		const auto& sphere = sphere_buffer[i];
 
@@ -178,6 +180,7 @@ bool Context::ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_directio
 		}
 	}
 
+	//triangles
 	for (unsigned long i = 0; i < primitive_buffer.size(); ++i) {
 		const auto& primitive = primitive_buffer[i];
 
@@ -197,7 +200,6 @@ bool Context::ComputePixelColor(const Vec3& ray_origin, const Vec3& ray_directio
 		return false;
 	} else if (nearest_polygon == -1) { //sphere
 		const auto& intersected_sphere = sphere_buffer[nearest_sphere];
-
 		//need at least intersection point, primitive material, surface normal
 		// (cross for triangle or subtract center for sphere, normalize!!!)
 		fragment_color = ComputeLighting(ray_origin, nearest_intersection, materials.at(intersected_sphere.mat_idx), GetNormalizedNormal(intersected_sphere, nearest_intersection));
